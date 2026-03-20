@@ -3,6 +3,7 @@
 let accounts = [];
 let selectedStreamId = null;
 let activeFilters = new Set(solutions.map(s => s.id));
+let inactiveIndustries = new Set();
 let kitMgrStage = 0;
 let kitTab = 'checklist'; // 'checklist' | 'timeline'
 let kitViewStage = null; // null = follow stream.stage
@@ -38,7 +39,7 @@ function effortColor(score) {
 function addAccount() {
   const id = Date.now();
   accounts.push({
-    id, industry: '산업', customer: '고객사',
+    id, industry: '산업', customer: '고객사', active: true,
     oppties: [{ id: id + 1, name: '신규 오퍼튜니티', streams: [] }]
   });
   syncUI(true);
@@ -212,6 +213,18 @@ function toggleSolFilter(id) {
   syncUI(false);
 }
 
+function toggleIndustryFilter(ind) {
+  if (inactiveIndustries.has(ind)) inactiveIndustries.delete(ind);
+  else inactiveIndustries.add(ind);
+  syncUI(true);
+}
+
+function toggleAccountActive(aId, currentActive) {
+  const a = accounts.find(x => x.id === aId);
+  if (a) a.active = !currentActive;
+  syncUI(true);
+}
+
 function filterAll(v) {
   if (v) solutions.forEach(s => activeFilters.add(s.id));
   else activeFilters.clear();
@@ -250,7 +263,7 @@ function importCSV() {
     if (p.length < 6) return;
     const [ind, cus, opp, prod, stage, amt] = p;
     let a = accounts.find(x => x.customer === cus);
-    if (!a) { a = { id: Date.now() + idx, industry: ind, customer: cus, oppties: [] }; accounts.push(a); }
+    if (!a) { a = { id: Date.now() + idx, industry: ind, customer: cus, oppties: [], active: true }; accounts.push(a); }
     let o = a.oppties.find(x => x.name === opp);
     if (!o) { o = { id: Date.now() + idx + 100, name: opp, streams: [] }; a.oppties.push(o); }
     const stg = parseInt(stage) || 0;
@@ -371,7 +384,7 @@ function transformCloudToTree(flatData, timelineData = []) {
     // row: { industry, customer, opportunity, product, stage, amount }
     let a = tree.find(x => x.customer === row.customer);
     if (!a) {
-      a = { id: Date.now() + idx, industry: row.industry, customer: row.customer, oppties: [] };
+      a = { id: Date.now() + idx, industry: row.industry, customer: row.customer, oppties: [], active: true };
       tree.push(a);
     }
 
