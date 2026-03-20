@@ -359,6 +359,38 @@ function renameKitItem(stage, cat, idx, newName) {
 
 // ===== THEME =====
 
+// ===== CLOUD DATA TRANSFORMATION (v7.0) =====
+function transformCloudToTree(flatData) {
+  const tree = [];
+  flatData.forEach((row, idx) => {
+    // row: { industry, customer, opportunity, product, stage, amount }
+    let a = tree.find(x => x.customer === row.customer);
+    if (!a) {
+      a = { id: Date.now() + idx, industry: row.industry, customer: row.customer, oppties: [] };
+      tree.push(a);
+    }
+    
+    let o = a.oppties.find(x => x.name === row.opportunity);
+    if (!o) {
+      o = { id: Date.now() + idx + 1000, name: row.opportunity, streams: [] };
+      a.oppties.push(o);
+    }
+    
+    const sid = `s-${Date.now()}-${idx}`;
+    const stg = parseInt(row.stage) || 0;
+    o.streams.push({
+      id: sid,
+      solId: row.product,
+      stage: stg,
+      amount: parseInt(row.amount) || 0,
+      hurdle: 30,
+      stageEfforts: { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) },
+      timeline: []
+    });
+  });
+  return tree;
+}
+
 function setTheme(t) {
   if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   else document.documentElement.removeAttribute('data-theme');
