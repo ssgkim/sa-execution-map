@@ -13,8 +13,8 @@ let timelineAccordionState = { 0: true, 1: true, 2: true, 3: true };
 function buildEfforts(stage) {
   const kit = kits[stage];
   const efforts = {};
-  kit.collateral.forEach(k => efforts['c:'+k] = false);
-  kit.engagement.forEach(k => efforts['e:'+k] = false);
+  kit.collateral.forEach(k => efforts['c:' + k] = false);
+  kit.engagement.forEach(k => efforts['e:' + k] = false);
   return efforts;
 }
 
@@ -37,9 +37,9 @@ function effortColor(score) {
 
 function addAccount() {
   const id = Date.now();
-  accounts.push({ 
-    id, industry:'산업', customer:'고객사', 
-    oppties: [{ id: id+1, name:'신규 오퍼튜니티', streams:[] }] 
+  accounts.push({
+    id, industry: '산업', customer: '고객사',
+    oppties: [{ id: id + 1, name: '신규 오퍼튜니티', streams: [] }]
   });
   syncUI(true);
 }
@@ -61,8 +61,8 @@ function addStream(aId, oId) {
   const a = accounts.find(x => x.id === aId);
   const o = a.oppties.find(x => x.id === oId);
   const sid = `s-${Date.now()}`;
-  o.streams.push({ 
-    id: sid, solId:'ocp', stage:0, amount:1000, hurdle:30, 
+  o.streams.push({
+    id: sid, solId: 'ocp', stage: 0, amount: 1000, hurdle: 30,
     stageEfforts: { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) },
     timeline: []
   });
@@ -94,13 +94,13 @@ function toggleEffort(sid, key, vStage) {
       if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
       const currentVal = !!s.stageEfforts[targetStage][key];
       s.stageEfforts[targetStage][key] = !currentVal;
-      
+
       if (!currentVal) {
         if (!s.timeline) s.timeline = [];
         const name = key.substring(2);
         const cat = key.startsWith('c:') ? 'collateral' : 'engagement';
         const date = new Date().toISOString().split('T')[0];
-        
+
         const exists = s.timeline.some(ev => ev.date === date && ev.stage === targetStage && ev.name === name);
         if (!exists) {
           const newEvent = {
@@ -112,7 +112,7 @@ function toggleEffort(sid, key, vStage) {
             memo: '체크리스트 완료'
           };
           s.timeline.push(newEvent);
-          
+
           // Cloud Sync (v7.0)
           postTimelineToCloud({
             accountId: sid, // stream id as account linkage
@@ -143,7 +143,7 @@ function addTimelineEvent(sid, cat, name, vStage) {
         memo: ''
       };
       s.timeline.push(newEvent);
-      
+
       // Cloud Sync (v7.0)
       postTimelineToCloud({
         accountId: sid,
@@ -246,12 +246,13 @@ function importCSV() {
     if (p.length < 6) return;
     const [ind, cus, opp, prod, stage, amt] = p;
     let a = accounts.find(x => x.customer === cus);
-    if (!a) { a = { id: Date.now()+idx, industry: ind, customer: cus, oppties: [] }; accounts.push(a); }
+    if (!a) { a = { id: Date.now() + idx, industry: ind, customer: cus, oppties: [] }; accounts.push(a); }
     let o = a.oppties.find(x => x.name === opp);
-    if (!o) { o = { id: Date.now()+idx+100, name: opp, streams: [] }; a.oppties.push(o); }
+    if (!o) { o = { id: Date.now() + idx + 100, name: opp, streams: [] }; a.oppties.push(o); }
     const stg = parseInt(stage) || 0;
-    o.streams.push({ 
-      id: `s-${Date.now()}-${idx}`, solId: prod, stage: stg, amount: parseInt(amt)||0, hurdle: 30, 
+    const sid = `s-${cus}-${opp}-${prod}`.replace(/\s+/g, '-');
+    o.streams.push({
+      id: sid, solId: prod, stage: stg, amount: parseInt(amt) || 0, hurdle: 30,
       stageEfforts: { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) },
       timeline: []
     });
@@ -271,7 +272,7 @@ function importActivityCSV() {
 
     let actCat = 'engagement';
     let actKey = 'e:' + name;
-    
+
     if (kits[actStage].collateral.includes(name)) {
       actCat = 'collateral'; actKey = 'c:' + name;
     } else if (kits[actStage].engagement.includes(name)) {
@@ -285,16 +286,16 @@ function importActivityCSV() {
         const s = o.streams.find(st => st.solId === prod);
         if (s) {
           if (!s.timeline) s.timeline = [];
-          
+
           const targetStage = actStage;
           const exists = s.timeline.some(ev => ev.date === date && ev.stage === targetStage && ev.name === name);
           if (!exists) {
             s.timeline.push({ id: Date.now() + Math.random(), date, stage: targetStage, cat: actCat, name, memo });
           }
-          
+
           if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
           if (s.stageEfforts[targetStage] && actKey in s.stageEfforts[targetStage]) {
-             s.stageEfforts[targetStage][actKey] = true;
+            s.stageEfforts[targetStage][actKey] = true;
           }
         }
       });
@@ -351,7 +352,7 @@ function renameKitItem(stage, cat, idx, newName) {
       delete s.stageEfforts[stage][oldKey];
     }
     if (s.timeline) {
-      s.timeline.forEach(ev => { if(ev.stage === stage && ev.name === oldName) ev.name = newName; });
+      s.timeline.forEach(ev => { if (ev.stage === stage && ev.name === oldName) ev.name = newName; });
     }
   })));
   syncUI(true);
@@ -360,7 +361,7 @@ function renameKitItem(stage, cat, idx, newName) {
 // ===== THEME =====
 
 // ===== CLOUD DATA TRANSFORMATION (v7.0) =====
-function transformCloudToTree(flatData) {
+function transformCloudToTree(flatData, timelineData = []) {
   const tree = [];
   flatData.forEach((row, idx) => {
     // row: { industry, customer, opportunity, product, stage, amount }
@@ -369,14 +370,14 @@ function transformCloudToTree(flatData) {
       a = { id: Date.now() + idx, industry: row.industry, customer: row.customer, oppties: [] };
       tree.push(a);
     }
-    
+
     let o = a.oppties.find(x => x.name === row.opportunity);
     if (!o) {
       o = { id: Date.now() + idx + 1000, name: row.opportunity, streams: [] };
       a.oppties.push(o);
     }
-    
-    const sid = `s-${Date.now()}-${idx}`;
+
+    const sid = row.id || `s-${row.customer}-${row.opportunity}-${row.product}`.replace(/\s+/g, '-');
     const stg = parseInt(row.stage) || 0;
     o.streams.push({
       id: sid,
@@ -388,6 +389,53 @@ function transformCloudToTree(flatData) {
       timeline: []
     });
   });
+
+  timelineData.forEach(ev => {
+    tree.forEach(a => a.oppties.forEach(o => o.streams.forEach(s => {
+      if (s.id === ev.accountId) {
+        let cat = 'engagement';
+        let name = ev.content || '';
+        let memo = '';
+
+        if (ev.type === 'event') {
+          const match = name.match(/^\[(.*?)\]\s*(.*)$/);
+          if (match) {
+            cat = match[1];
+            name = match[2];
+          }
+          memo = '체크리스트 완료';
+        }
+
+        let dateStr = ev.date;
+        if (dateStr && String(dateStr).includes('T')) {
+          dateStr = String(dateStr).split('T')[0];
+        }
+
+        const evId = ev.id || Date.now() + Math.random();
+        const exist = s.timeline.find(x => x.id === evId);
+
+        if (!exist) {
+          const targetStage = parseInt(ev.stage) || 0;
+          s.timeline.push({
+            id: evId,
+            date: dateStr,
+            stage: targetStage,
+            cat: cat,
+            name: name,
+            memo: memo
+          });
+
+          if (s.stageEfforts && s.stageEfforts[targetStage]) {
+            const actKey = (cat === 'collateral' ? 'c:' : 'e:') + name;
+            if (actKey in s.stageEfforts[targetStage]) {
+              s.stageEfforts[targetStage][actKey] = true;
+            }
+          }
+        }
+      }
+    })));
+  });
+
   return tree;
 }
 
