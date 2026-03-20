@@ -108,8 +108,8 @@
 </div>
 
 <div class="container">
-  <h1>🎯 SA Sales Execution Map v4.5</h1>
-  <p class="subtitle">Clean Presentation Mode — Presentation-Ready Analytics</p>
+  <h1>🎯 SA Sales Execution Map v4.6</h1>
+  <p class="subtitle">Enhanced Scatter — Jitter + Proportional Sizing</p>
 
   <div class="main-layout">
     <div class="left-panel">
@@ -353,37 +353,97 @@ function renderMap() {
   const wrap = canvas.parentElement;
   canvas.width = wrap.clientWidth * 2; canvas.height = wrap.clientHeight * 2;
   const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
-  const W = wrap.clientWidth, H = wrap.clientHeight, pad = 50;
+  const W = wrap.clientWidth, H = wrap.clientHeight, pad = 60;
   ctx.clearRect(0, 0, W, H);
   const cs = getComputedStyle(document.documentElement);
 
   const sMax = parseInt(document.getElementById('cfg-single-max').value) || 10000;
   const tMax = parseInt(document.getElementById('cfg-total-max').value) || 30000;
+  const colW = (W - 2*pad) / 4; // 4 columns
 
+  // Draw column backgrounds (alternating)
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(0,0,0,0.015)' : 'rgba(0,0,0,0.005)';
+    ctx.fillRect(pad + i*colW, pad, colW, H - 2*pad);
+  }
+
+  // Draw mid lines
   ctx.strokeStyle = cs.getPropertyValue('--q-border').trim();
-  ctx.lineWidth = 1; ctx.beginPath();
-  ctx.moveTo(W/2, pad); ctx.lineTo(W/2, H-pad);
-  ctx.moveTo(pad, H/2); ctx.lineTo(W-pad, H/2); ctx.stroke();
+  ctx.lineWidth = 1;
+  // Horizontal mid
+  ctx.beginPath(); ctx.moveTo(pad, H/2); ctx.lineTo(W-pad, H/2); ctx.stroke();
+  // Vertical column separators
+  ctx.setLineDash([3,3]);
+  for (let i = 1; i < 4; i++) {
+    ctx.beginPath(); ctx.moveTo(pad + i*colW, pad); ctx.lineTo(pad + i*colW, H-pad); ctx.stroke();
+  }
+  ctx.setLineDash([]);
 
+  // Stage labels at bottom
+  ctx.fillStyle = cs.getPropertyValue('--text-muted').trim();
+  ctx.font = 'bold 10px Segoe UI';
+  ctx.textAlign = 'center';
+  stages.forEach((st, i) => {
+    ctx.fillText(`${stageIcons[i]} ${st}`, pad + i*colW + colW/2, H - pad + 15);
+  });
+
+  // Collect all visible streams for jitter calculation
+  const stageSlots = [[], [], [], []];
   accounts.forEach((acc, ai) => {
-    const color = colors[ai % colors.length];
     const accTotal = acc.oppties.reduce((sum, o) => sum + o.streams.reduce((s, st) => s + st.amount, 0), 0);
     acc.oppties.forEach(opp => {
       opp.streams.forEach(s => {
         if (!activeFilters.has(s.solId)) return;
-        const xPos = pad + (s.stage / 3) * (W - 2*pad);
-        const yVal = (Math.min(1, s.amount / sMax)*0.6) + (Math.min(1, accTotal / tMax)*0.4);
-        const yPos = (H - pad) - yVal * (H - 2*pad);
-        const isSelected = s.id === selectedStreamId;
-        ctx.fillStyle = color;
-        if (isSelected) { ctx.shadowBlur = 12; ctx.shadowColor = color; }
-        ctx.beginPath(); ctx.arc(xPos, yPos, isSelected ? 9 : 6, 0, Math.PI*2); ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = isSelected ? cs.getPropertyValue('--text-heading') : cs.getPropertyValue('--text-dim');
-        ctx.font = isSelected ? 'bold 10px Segoe UI' : '9px Segoe UI';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${acc.customer}:${solutions.find(x=>x.id===s.solId).name}`, xPos, yPos - (isSelected ? 14 : 10));
+        stageSlots[s.stage].push({ s, acc, ai, accTotal });
       });
+    });
+  });
+
+  // Draw dots with jitter within columns
+  stageSlots.forEach((slots, stageIdx) => {
+    const colCenter = pad + stageIdx * colW + colW / 2;
+    const jitterRange = colW * 0.35; // scatter within 70% of column width
+
+    slots.forEach((item, slotIdx) => {
+      const { s, acc, ai, accTotal } = item;
+      const color = colors[ai % colors.length];
+
+      // X: column center + deterministic jitter based on slot index
+      const jitterSeed = (slotIdx - (slots.length - 1) / 2);
+      const jitterStep = slots.length > 1 ? jitterRange / (slots.length - 1) : 0;
+      const xPos = colCenter + jitterSeed * jitterStep;
+
+      // Y: strategic value
+      const yVal = (Math.min(1, s.amount / sMax)*0.6) + (Math.min(1, accTotal / tMax)*0.4);
+      const yPos = (H - pad) - yVal * (H - 2*pad);
+
+      // Dot size proportional to amount
+      const baseR = 4 + Math.min(8, (s.amount / sMax) * 8);
+      const isSelected = s.id === selectedStreamId;
+      const r = isSelected ? baseR + 3 : baseR;
+
+      // Draw dot
+      ctx.globalAlpha = isSelected ? 1 : 0.85;
+      ctx.fillStyle = color;
+      if (isSelected) { ctx.shadowBlur = 14; ctx.shadowColor = color; }
+      ctx.beginPath(); ctx.arc(xPos, yPos, r, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Border ring
+      ctx.strokeStyle = isSelected ? '#000' : 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = isSelected ? 2 : 1;
+      ctx.beginPath(); ctx.arc(xPos, yPos, r, 0, Math.PI*2); ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Label
+      ctx.fillStyle = isSelected ? cs.getPropertyValue('--text-heading') : cs.getPropertyValue('--text-dim');
+      ctx.font = isSelected ? 'bold 10px Segoe UI' : '9px Segoe UI';
+      ctx.textAlign = 'center';
+      const label = `${acc.customer}:${solutions.find(x=>x.id===s.solId).name}`;
+      ctx.fillText(label, xPos, yPos - r - 4);
+
+      // Store position for click detection
+      s._rx = xPos; s._ry = yPos; s._rr = r;
     });
   });
 }
@@ -418,19 +478,12 @@ document.getElementById('map-canvas').addEventListener('click', (e) => {
   const rect = e.target.getBoundingClientRect();
   const x = (e.clientX - rect.left);
   const y = (e.clientY - rect.top);
-  const pad = 50, W = rect.width, H = rect.height;
-  const sMax = parseInt(document.getElementById('cfg-single-max').value) || 10000;
-  const tMax = parseInt(document.getElementById('cfg-total-max').value) || 30000;
-  let closest = null, minDiff = 20;
+  let closest = null, minDiff = 25;
   accounts.forEach(acc => {
-    const accTotal = acc.oppties.reduce((sum, o) => sum + o.streams.reduce((s, st) => s + st.amount, 0), 0);
     acc.oppties.forEach(opp => {
       opp.streams.forEach(s => {
-        if (!activeFilters.has(s.solId)) return;
-        const xPos = pad + (s.stage / 3) * (W - 2*pad);
-        const yVal = (Math.min(1, s.amount / sMax)*0.6) + (Math.min(1, accTotal / tMax)*0.4);
-        const yPos = (H - pad) - yVal * (H - 2*pad);
-        const diff = Math.sqrt((xPos - x)**2 + (yPos - y)**2);
+        if (!activeFilters.has(s.solId) || s._rx == null) return;
+        const diff = Math.sqrt((s._rx - x)**2 + (s._ry - y)**2);
         if (diff < minDiff) { minDiff = diff; closest = s.id; }
       });
     });
@@ -446,3 +499,4 @@ syncUI(true);
 </script>
 </body>
 </html>
+/html>
