@@ -1,4 +1,4 @@
-# SA Sales Execution Map v7.2
+# SA Sales Execution Map v7.3
 
 Red Hat SA 세일즈 파이프라인 시각화 & 실행 전략 도구
 
@@ -34,9 +34,10 @@ sa-execution-map/
 - 🍩 도넛 게이지로 Effort(활동 투입률) 시각화
 - ✅ 단계별 세일즈 활동 체크리스트
 - 📋 세일즈킷 항목 추가/수정/삭제
-- 📥 CSV Bulk Import
+- 📥 CSV Bulk Import (Google Sheets Cloud 자동 전송)
 - ☁️ Google Sheets 기반 Cloud Sync 자동화
-- 🔧 솔루션 필터
+- 🔧 솔루션/어카운트/인더스트리 양방향 가시성 필터 (Visibility Toggles)
+- 🏊 스윔레인(Swimlane) 시간 축(X-Axis) 및 날짜 조정 Drag & Drop
 - 🌗 Dark/Light 테마
 
 ## 배포

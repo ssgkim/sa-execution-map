@@ -1,154 +1,169 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SA Sales Execution Map v7.2</title>
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SA Sales Execution Map v7.3</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
-<div class="theme-switcher">
-  <div class="theme-btn active" data-t="light" onclick="setTheme('light')"></div>
-  <div class="theme-btn" data-t="dark" onclick="setTheme('dark')"></div>
-</div>
+  <div class="theme-switcher">
+    <div class="theme-btn active" data-t="light" onclick="setTheme('light')"></div>
+    <div class="theme-btn" data-t="dark" onclick="setTheme('dark')"></div>
+  </div>
 
-<div class="container">
-  <h1>🎯 SA Sales Execution Map v7.2 <span id="sync-badge" style="font-size: 0.6em; cursor: help;" title="Cloud Sync Status">☁️</span></h1>
-  <p class="subtitle">Cloud Intelligence & Visual Filters</p>
+  <div class="container">
+    <h1>🎯 SA Sales Execution Map v7.3 <span id="sync-badge" style="font-size: 0.6em; cursor: help;"
+        title="Cloud Sync Status">☁️</span></h1>
+    <p class="subtitle">Interactive Swimlane & Cloud Bulk Upload</p>
 
-  <div class="main-layout">
-    <!-- LEFT PANEL -->
-    <div class="left-panel">
-      <!-- Y-Axis Config -->
-      <div class="config-section">
-        <div class="config-title">🚀 Y축 전략 스케일 설정</div>
-        <div class="config-row">
-          <div class="config-item">
-            <label class="config-label">Single Max (만원)</label>
-            <input type="number" class="config-input" id="cfg-single-max" value="100000" oninput="syncUI(false)">
-          </div>
-          <div class="config-item">
-            <label class="config-label">Account Total Max (만원)</label>
-            <input type="number" class="config-input" id="cfg-total-max" value="300000" oninput="syncUI(false)">
-          </div>
-        </div>
-      </div>
-
-      <!-- Kit Manager -->
-      <div class="kit-mgr-section">
-        <div class="kit-mgr-title" onclick="toggleKitMgr()">
-          <span>📋 세일즈킷 관리</span>
-          <span id="kit-mgr-icon">▼</span>
-        </div>
-        <div id="kit-mgr-body" class="kit-mgr-body" style="display:none;">
-          <div class="kit-stage-tab" id="kit-stage-tabs"></div>
-          <div id="kit-mgr-content"></div>
-        </div>
-      </div>
-
-      <!-- Solution Filter -->
-      <div class="filter-section">
-        <div class="filter-title" onclick="toggleFilter()">
-          <span>🔧 솔루션 필터</span>
-          <span id="filter-icon">▼</span>
-        </div>
-        <div id="filter-body" style="display:none;">
-          <div class="sol-tag-grid" id="filter-grid"></div>
-          <div style="margin-top:8px; display:flex; gap:5px;">
-            <button class="btn-action" style="flex:1; font-size:0.65em;" onclick="filterAll(true)">전체</button>
-            <button class="btn-action" style="flex:1; font-size:0.65em;" onclick="filterAll(false)">해제</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Account Header -->
-      <div class="panel-header">
-        <h3>🏢 계정 및 파이프라인</h3>
-        <button class="btn-action" onclick="addAccount()">＋ 계정 추가</button>
-      </div>
-
-      <!-- CSV Import -->
-      <div class="csv-import-box">
-        <p style="font-size:0.65em; color:var(--text-muted); margin-bottom:5px;">📥 신규 데이터 불러오기 (Bulk)</p>
-        <textarea id="csv-input" class="csv-textarea" placeholder="금융,A은행,클라우드전환,ocp,2,50000"></textarea>
-        <button class="btn-action" style="width:100%; font-size:0.7em;" onclick="importCSV()">데이터 임포트</button>
-      </div>
-
-      <!-- Activity Log CSV -->
-      <div class="csv-import-box">
-        <p style="font-size:0.65em; color:var(--text-muted); margin-bottom:5px;">📜 활동 로그 불러오기 (Bulk)</p>
-        <textarea id="activity-csv-input" class="csv-textarea" placeholder="고객사,오퍼튜니티,제품,단계(0~3),날짜,활동명,메모"></textarea>
-        <button class="btn-action" style="width:100%; font-size:0.7em;" onclick="importActivityCSV()">활동 로그 임포트</button>
-      </div>
-
-      <!-- Account List -->
-      <div id="account-list"></div>
-    </div>
-
-    <!-- RIGHT PANEL -->
-    <div class="right-panel">
-      <!-- Map -->
-      <div class="map-container">
-        <div class="canvas-wrap">
-          <canvas id="map-canvas"></canvas>
-          <div class="map-label label-y">Strategic Account Value ↑</div>
-          <div class="map-label label-x">Pipeline Stage →</div>
-          <div style="position:absolute; top:15px; right:15px; color:#4CAF50; font-size:0.75em; font-weight:800; opacity:0.6;">🎯 PRIORITY</div>
-          <div style="position:absolute; top:15px; left:50px; color:#FF9800; font-size:0.75em; font-weight:800; opacity:0.6;">🌱 NURTURE</div>
-          <div style="position:absolute; bottom:40px; left:50px; color:#9E9E9E; font-size:0.75em; font-weight:800; opacity:0.6;">🔍 EXPLORE</div>
-          <div style="position:absolute; bottom:40px; right:15px; color:#2196F3; font-size:0.75em; font-weight:800; opacity:0.6;">🏆 HARVEST</div>
-        </div>
-      </div>
-
-      <!-- Swim Lane -->
-      <div class="swimlane-container" id="swimlane-container" style="display:none;">
-        <div class="swimlane-title" id="swimlane-title">🏊 Account Activity Swim Lane</div>
-        <div class="swimlane-wrap">
-          <canvas id="swimlane-canvas"></canvas>
-        </div>
-      </div>
-
-      <!-- Kit Panel (Tabs) -->
-      <div class="kit-panel" id="kit-panel">
-        <div id="kit-header" style="border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:10px;">
-          <h4 id="kit-title" style="font-size:0.95em;"></h4>
-          <div id="kit-meta" style="font-size:0.75em; margin-top:3px;"></div>
-        </div>
-        
-        <div class="kit-tabs" id="kit-tabs"></div>
-
-        <!-- Checklist View -->
-        <div class="kit-grid" id="kit-content">
-          <div class="kit-box">
-            <h5>📦 세일즈 자료 (Collateral)</h5>
-            <div id="kit-collateral"></div>
-          </div>
-          <div class="kit-box">
-            <h5>🤝 활동 (Engagement)</h5>
-            <div id="kit-engagement"></div>
+    <div class="main-layout">
+      <!-- LEFT PANEL -->
+      <div class="left-panel">
+        <!-- Y-Axis Config -->
+        <div class="config-section">
+          <div class="config-title">🚀 Y축 전략 스케일 설정</div>
+          <div class="config-row">
+            <div class="config-item">
+              <label class="config-label">Single Max (만원)</label>
+              <input type="number" class="config-input" id="cfg-single-max" value="100000" oninput="syncUI(false)">
+            </div>
+            <div class="config-item">
+              <label class="config-label">Account Total Max (만원)</label>
+              <input type="number" class="config-input" id="cfg-total-max" value="300000" oninput="syncUI(false)">
+            </div>
           </div>
         </div>
 
-        <!-- Timeline View -->
-        <div id="timeline-content" style="display:none;"></div>
+        <!-- Kit Manager -->
+        <div class="kit-mgr-section">
+          <div class="kit-mgr-title" onclick="toggleKitMgr()">
+            <span>📋 세일즈킷 관리</span>
+            <span id="kit-mgr-icon">▼</span>
+          </div>
+          <div id="kit-mgr-body" class="kit-mgr-body" style="display:none;">
+            <div class="kit-stage-tab" id="kit-stage-tabs"></div>
+            <div id="kit-mgr-content"></div>
+          </div>
+        </div>
 
-        <div class="effort-summary" id="effort-summary"></div>
+        <!-- Solution Filter -->
+        <div class="filter-section">
+          <div class="filter-title" onclick="toggleFilter()">
+            <span>🔧 솔루션 필터</span>
+            <span id="filter-icon">▼</span>
+          </div>
+          <div id="filter-body" style="display:none;">
+            <div class="sol-tag-grid" id="filter-grid"></div>
+            <div style="margin-top:8px; display:flex; gap:5px;">
+              <button class="btn-action" style="flex:1; font-size:0.65em;" onclick="filterAll(true)">전체</button>
+              <button class="btn-action" style="flex:1; font-size:0.65em;" onclick="filterAll(false)">해제</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account Header -->
+        <div class="panel-header">
+          <h3>🏢 계정 및 파이프라인</h3>
+          <button class="btn-action" onclick="addAccount()">＋ 계정 추가</button>
+        </div>
+
+        <!-- CSV Import -->
+        <div class="csv-import-box">
+          <p style="font-size:0.65em; color:var(--text-muted); margin-bottom:5px;">📥 신규 데이터 불러오기 (Bulk)</p>
+          <textarea id="csv-input" class="csv-textarea" placeholder="금융,A은행,클라우드전환,ocp,2,50000"></textarea>
+          <button class="btn-action" style="width:100%; font-size:0.7em;" onclick="importCSV()">데이터 임포트</button>
+        </div>
+
+        <!-- Activity Log CSV -->
+        <div class="csv-import-box">
+          <p style="font-size:0.65em; color:var(--text-muted); margin-bottom:5px;">📜 활동 로그 불러오기 (Bulk)</p>
+          <textarea id="activity-csv-input" class="csv-textarea"
+            placeholder="고객사,오퍼튜니티,제품,단계(0~3),날짜,활동명,메모"></textarea>
+          <button class="btn-action" style="width:100%; font-size:0.7em;" onclick="importActivityCSV()">활동 로그
+            임포트</button>
+        </div>
+
+        <!-- Account List -->
+        <div id="account-list"></div>
       </div>
 
-      <!-- Dashboard -->
-      <div class="dashboard-container">
-        <div class="config-title" style="color:var(--text-heading); cursor:default; margin-bottom:15px;">📊 Activity Dashboard</div>
-        <div id="dashboard-content"></div>
+      <!-- RIGHT PANEL -->
+      <div class="right-panel">
+        <!-- Map -->
+        <div class="map-container">
+          <div class="canvas-wrap">
+            <canvas id="map-canvas"></canvas>
+            <div class="map-label label-y">Strategic Account Value ↑</div>
+            <div class="map-label label-x">Pipeline Stage →</div>
+            <div
+              style="position:absolute; top:15px; right:15px; color:#4CAF50; font-size:0.75em; font-weight:800; opacity:0.6;">
+              🎯 PRIORITY</div>
+            <div
+              style="position:absolute; top:15px; left:50px; color:#FF9800; font-size:0.75em; font-weight:800; opacity:0.6;">
+              🌱 NURTURE</div>
+            <div
+              style="position:absolute; bottom:40px; left:50px; color:#9E9E9E; font-size:0.75em; font-weight:800; opacity:0.6;">
+              🔍 EXPLORE</div>
+            <div
+              style="position:absolute; bottom:40px; right:15px; color:#2196F3; font-size:0.75em; font-weight:800; opacity:0.6;">
+              🏆 HARVEST</div>
+          </div>
+        </div>
+
+        <!-- Swim Lane -->
+        <div class="swimlane-container" id="swimlane-container" style="display:none;">
+          <div class="swimlane-title" id="swimlane-title">🏊 Account Activity Swim Lane</div>
+          <div class="swimlane-wrap">
+            <canvas id="swimlane-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Kit Panel (Tabs) -->
+        <div class="kit-panel" id="kit-panel">
+          <div id="kit-header" style="border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:10px;">
+            <h4 id="kit-title" style="font-size:0.95em;"></h4>
+            <div id="kit-meta" style="font-size:0.75em; margin-top:3px;"></div>
+          </div>
+
+          <div class="kit-tabs" id="kit-tabs"></div>
+
+          <!-- Checklist View -->
+          <div class="kit-grid" id="kit-content">
+            <div class="kit-box">
+              <h5>📦 세일즈 자료 (Collateral)</h5>
+              <div id="kit-collateral"></div>
+            </div>
+            <div class="kit-box">
+              <h5>🤝 활동 (Engagement)</h5>
+              <div id="kit-engagement"></div>
+            </div>
+          </div>
+
+          <!-- Timeline View -->
+          <div id="timeline-content" style="display:none;"></div>
+
+          <div class="effort-summary" id="effort-summary"></div>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="dashboard-container">
+          <div class="config-title" style="color:var(--text-heading); cursor:default; margin-bottom:15px;">📊 Activity
+            Dashboard</div>
+          <div id="dashboard-content"></div>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- Scripts -->
-<script src="js/data.js"></script>
-<script src="js/state.js"></script>
-<script src="js/render.js"></script>
-<script src="js/app.js"></script>
+  <!-- Scripts -->
+  <script src="js/data.js?v=7.2"></script>
+  <script src="js/state.js?v=7.2"></script>
+  <script src="js/render.js?v=7.2"></script>
+  <script src="js/app.js?v=7.2"></script>
 </body>
+
 </html>

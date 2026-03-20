@@ -230,6 +230,9 @@ function renderSwimLane() {
   const W = wrap.clientWidth, H = canvas.height / 2, padX = 80, padY = 40;
   ctx.clearRect(0, 0, W, H);
 
+  window.swimlaneHitboxes = [];
+  window.swimlaneMeta = null;
+
   let minDate = new Date(), maxDate = new Date(0);
   allEvents.forEach(ev => {
     const d = new Date(ev.date);
@@ -241,6 +244,8 @@ function renderSwimLane() {
   minDate.setDate(minDate.getDate() - 5);
   maxDate.setDate(maxDate.getDate() + 5);
   const timeSpan = maxDate - minDate;
+
+  window.swimlaneMeta = { minDate: new Date(minDate), timeSpan, padX, innerW: W - padX - 40 };
 
   ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(padX, H - 20); ctx.lineTo(W - 20, H - 20); ctx.stroke();
@@ -254,6 +259,7 @@ function renderSwimLane() {
   else if (totalDays > 21) stepDays = 7;
   else if (totalDays > 7) stepDays = 2;
 
+  const cs = getComputedStyle(document.documentElement);
   ctx.fillStyle = cs.getPropertyValue('--text-dim') || '#888';
   ctx.font = '10px Segoe UI'; ctx.textAlign = 'center';
 
@@ -288,6 +294,8 @@ function renderSwimLane() {
         ctx.fillStyle = color;
         ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+
+        window.swimlaneHitboxes.push({ x, y, r: 5, ev, sId: s.id });
 
         ctx.save();
         ctx.translate(x, y - 8);

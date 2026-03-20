@@ -166,12 +166,31 @@ function addTimelineEvent(sid, cat, name, vStage) {
   syncUI(false);
 }
 
+async function syncTimelineUpdateToCloud(customer, opportunity, solId, stage, name, oldDate, updates) {
+  if (!GAS_WEB_APP_URL) return;
+  try {
+    await fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'updateTimeline',
+        search: { customer, opportunity, solId, stage, date: oldDate, name },
+        update: updates
+      })
+    });
+  } catch (e) { console.error('Update Timeline Sync Error:', e); }
+}
+
 function updateTimelineEvent(sid, evId, field, val) {
   accounts.forEach(a => a.oppties.forEach(o => {
     const s = o.streams.find(x => x.id === sid);
     if (s && s.timeline) {
       const ev = s.timeline.find(e => e.id === evId);
-      if (ev) ev[field] = val;
+      if (ev) {
+        const oldDate = ev.date;
+        ev[field] = val;
+        syncTimelineUpdateToCloud(a.customer, o.name, s.solId, ev.stage, ev.name, oldDate, { [field]: val });
+      }
     }
   }));
   syncUI(false);
@@ -254,71 +273,60 @@ function toggleTimelineAccordion(st) {
 
 // ===== CSV IMPORT =====
 
-function importCSV() {
+async function importCSV() {
   const input = document.getElementById('csv-input').value;
   if (!input) return;
-  accounts = [];
-  input.trim().split('\n').forEach((line, idx) => {
+  document.getElementById('csv-input').value = '☁️ 클라우드로 전송 중입니다... (10~20초 소요될 수 있습니다)';
+
+  const uploadRows = [];
+  input.trim().split('\n').forEach((line) => {
     const p = line.split(',').map(s => s.trim());
     if (p.length < 6) return;
     const [ind, cus, opp, prod, stage, amt] = p;
-    let a = accounts.find(x => x.customer === cus && x.industry === ind);
-    if (!a) { a = { id: Date.now() + idx, industry: ind, customer: cus, oppties: [], active: true }; accounts.push(a); }
-    let o = a.oppties.find(x => x.name === opp);
-    if (!o) { o = { id: Date.now() + idx + 100, name: opp, streams: [] }; a.oppties.push(o); }
-    const stg = parseInt(stage) || 0;
-    const sid = `s-${cus}-${opp}-${prod}`.replace(/\s+/g, '-');
-    o.streams.push({
-      id: sid, solId: prod, stage: stg, amount: parseInt(amt) || 0, hurdle: 30,
-      stageEfforts: { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) },
-      timeline: []
-    });
+    uploadRows.push([ind, cus, opp, prod, parseInt(stage) || 0, parseInt(amt) || 0]);
   });
-  syncUI(true);
+
+  if (uploadRows.length > 0) {
+    try {
+      await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'bulkAppend', sheetName: 'Accounts', payload: uploadRows })
+      });
+    } catch (e) { console.error('Bulk Import Error:', e); }
+  }
+
+  await init(); // Fetch fresh data from cloud and rerender
+  document.getElementById('csv-input').value = '';
 }
 
-function importActivityCSV() {
+async function importActivityCSV() {
   const input = document.getElementById('activity-csv-input').value;
   if (!input) return;
+  document.getElementById('activity-csv-input').value = '☁️ 클라우드로 전송 중입니다... (10~20초 소요될 수 있습니다)';
+
+  const uploadRows = [];
   input.trim().split('\n').forEach(line => {
     const p = line.split(',').map(s => s.trim());
     if (p.length < 7) return;
     const [cus, opp, prod, stageStr, date, name, memo] = p;
     const actStage = parseInt(stageStr, 10);
     if (isNaN(actStage) || actStage < 0 || actStage > 3) return;
-
-    let actCat = 'engagement';
-    let actKey = 'e:' + name;
-
-    if (kits[actStage].collateral.includes(name)) {
-      actCat = 'collateral'; actKey = 'c:' + name;
-    } else if (kits[actStage].engagement.includes(name)) {
-      actCat = 'engagement'; actKey = 'e:' + name;
-    }
-
-    accounts.forEach(a => {
-      if (a.customer !== cus) return;
-      a.oppties.forEach(o => {
-        if (o.name !== opp) return;
-        const s = o.streams.find(st => st.solId === prod);
-        if (s) {
-          if (!s.timeline) s.timeline = [];
-
-          const targetStage = actStage;
-          const exists = s.timeline.some(ev => ev.date === date && ev.stage === targetStage && ev.name === name);
-          if (!exists) {
-            s.timeline.push({ id: Date.now() + Math.random(), date, stage: targetStage, cat: actCat, name, memo });
-          }
-
-          if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
-          if (s.stageEfforts[targetStage] && actKey in s.stageEfforts[targetStage]) {
-            s.stageEfforts[targetStage][actKey] = true;
-          }
-        }
-      });
-    });
+    uploadRows.push([cus, opp, prod, actStage, date, name, memo]);
   });
-  syncUI(true);
+
+  if (uploadRows.length > 0) {
+    try {
+      await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'bulkAppend', sheetName: 'Timeline', payload: uploadRows })
+      });
+    } catch (e) { console.error('Activity Import Error:', e); }
+  }
+
+  await init();
+  document.getElementById('activity-csv-input').value = '';
 }
 
 // ===== KIT MANAGER ACTIONS =====
@@ -408,7 +416,9 @@ function transformCloudToTree(flatData, timelineData = []) {
   });
 
   timelineData.forEach(ev => {
-    // ev: { customer, opportunity, solId, stage, date, name, memo }
+    // Ignore header row if it slipped through the API
+    if (isNaN(parseInt(ev.stage))) return;
+
     tree.forEach(a => {
       if (a.customer !== ev.customer) return;
       a.oppties.forEach(o => {
