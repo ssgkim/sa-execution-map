@@ -343,9 +343,15 @@ function renderKit() {
       [0, 1, 2, 3].forEach(st => {
         if (grouped[st].length === 0) return;
         grouped[st].sort((a,b) => new Date(b.date) - new Date(a.date));
+        
+        const isOpen = timelineAccordionState[st];
         tlHtml += `
           <div class="timeline-group stage-${st}">
-            <div class="tl-group-header">${stageIcons[st]} ${stages[st]}</div>
+            <div class="tl-group-header" onclick="toggleTimelineAccordion(${st})" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; user-select:none;">
+              <span>${stageIcons[st]} ${stages[st]} <small style="font-weight:normal; opacity:0.8;">(${grouped[st].length}건)</small></span>
+              <span>${isOpen ? '▼' : '◀'}</span>
+            </div>
+            ${isOpen ? `
             <div class="tl-group-body">
               ${grouped[st].map(ev => `
                 <div class="timeline-item">
@@ -364,6 +370,7 @@ function renderKit() {
                 </div>
               `).join('')}
             </div>
+            ` : ''}
           </div>
         `;
       });

@@ -7,6 +7,7 @@ let kitMgrStage = 0;
 let kitTab = 'checklist'; // 'checklist' | 'timeline'
 let kitViewStage = null; // null = follow stream.stage
 let timelineEditMode = false;
+let timelineAccordionState = { 0: true, 1: true, 2: true, 3: true };
 
 // Build default effort checklist for a given stage
 function buildEfforts(stage) {
@@ -204,6 +205,12 @@ function setKitViewStage(stage) {
 
 function toggleTimelineEdit() {
   timelineEditMode = !timelineEditMode;
+  renderKit();
+}
+
+
+function toggleTimelineAccordion(st) {
+  timelineAccordionState[st] = !timelineAccordionState[st];
   renderKit();
 }
 
