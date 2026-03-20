@@ -1,9 +1,10 @@
-/* ===== state.js — State Management ===== */
+/* ===== state.js — State Management (v6.0) ===== */
 
 let accounts = [];
 let selectedStreamId = null;
 let activeFilters = new Set(solutions.map(s => s.id));
 let kitMgrStage = 0;
+let kitTab = 'checklist'; // 'checklist' | 'timeline'
 
 // Build default effort checklist for a given stage
 function buildEfforts(stage) {
@@ -14,15 +15,15 @@ function buildEfforts(stage) {
   return efforts;
 }
 
-// Calculate effort completion score (0~1)
+// Get current effort score for a stream
 function getEffortScore(s) {
-  if (!s.efforts) return 0;
-  const keys = Object.keys(s.efforts);
+  const efforts = s.stageEfforts ? s.stageEfforts[s.stage] : s.efforts;
+  if (!efforts) return 0;
+  const keys = Object.keys(efforts);
   if (!keys.length) return 0;
-  return keys.filter(k => s.efforts[k]).length / keys.length;
+  return keys.filter(k => efforts[k]).length / keys.length;
 }
 
-// Color based on effort score
 function effortColor(score) {
   if (score >= 0.7) return '#4CAF50';
   if (score >= 0.4) return '#FF9800';
@@ -33,7 +34,10 @@ function effortColor(score) {
 
 function addAccount() {
   const id = Date.now();
-  accounts.push({ id, industry:'산업', customer:'고객사', oppties: [{ id: id+1, name:'신규 오퍼튜니티', streams:[] }] });
+  accounts.push({ 
+    id, industry:'산업', customer:'고객사', 
+    oppties: [{ id: id+1, name:'신규 오퍼튜니티', streams:[] }] 
+  });
   syncUI(true);
 }
 
@@ -54,7 +58,11 @@ function addStream(aId, oId) {
   const a = accounts.find(x => x.id === aId);
   const o = a.oppties.find(x => x.id === oId);
   const sid = `s-${Date.now()}`;
-  o.streams.push({ id: sid, solId:'ocp', stage:0, amount:1000, hurdle:30, efforts: buildEfforts(0) });
+  o.streams.push({ 
+    id: sid, solId:'ocp', stage:0, amount:1000, hurdle:30, 
+    stageEfforts: { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) },
+    timeline: []
+  });
   selectedStreamId = sid;
   syncUI(true);
 }
@@ -64,10 +72,10 @@ function updateStream(sid, field, val) {
     const s = o.streams.find(x => x.id === sid);
     if (s) {
       s[field] = val;
-      if (field === 'stage') {
-        const newEfforts = buildEfforts(val);
-        Object.keys(newEfforts).forEach(k => { if (s.efforts && s.efforts[k]) newEfforts[k] = true; });
-        s.efforts = newEfforts;
+      // Handle legacy efforts if any
+      if (!s.stageEfforts) {
+        s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
+        if (s.efforts) s.stageEfforts[s.stage] = s.efforts;
       }
     }
   }));
@@ -77,7 +85,49 @@ function updateStream(sid, field, val) {
 function toggleEffort(sid, key) {
   accounts.forEach(a => a.oppties.forEach(o => {
     const s = o.streams.find(x => x.id === sid);
-    if (s && s.efforts) s.efforts[key] = !s.efforts[key];
+    if (s) {
+      if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
+      const currentVal = !!s.stageEfforts[s.stage][key];
+      s.stageEfforts[s.stage][key] = !currentVal;
+      
+      // Auto-record to timeline when checked
+      if (!currentVal) {
+        if (!s.timeline) s.timeline = [];
+        const name = key.substring(2);
+        const cat = key.startsWith('c:') ? 'collateral' : 'engagement';
+        s.timeline.push({
+          id: Date.now(),
+          date: new Date().toISOString().split('T')[0],
+          stage: s.stage,
+          cat: cat,
+          name: name,
+          memo: '체크리스트 완료'
+        });
+      }
+    }
+  }));
+  syncUI(false);
+}
+
+function addTimelineEvent(sid, cat, name) {
+  accounts.forEach(a => a.oppties.forEach(o => {
+    const s = o.streams.find(x => x.id === sid);
+    if (s) {
+      if (!s.timeline) s.timeline = [];
+      const memo = prompt('활동 메모를 입력하세요 (선택사항):');
+      s.timeline.push({
+        id: Date.now(),
+        date: new Date().toISOString().split('T')[0],
+        stage: s.stage,
+        cat: cat,
+        name: name,
+        memo: memo || ''
+      });
+      // Ensure it's marked in checklist too
+      const key = (cat === 'collateral' ? 'c:' : 'e:') + name;
+      if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
+      s.stageEfforts[s.stage][key] = true;
+    }
   }));
   syncUI(false);
 }
@@ -92,7 +142,7 @@ function deleteStream(aId, oId, sid) {
 
 function selectStream(id) { selectedStreamId = id; syncUI(true); }
 
-// ===== FILTER ACTIONS =====
+// ===== FILTER & TAB ACTIONS =====
 
 function toggleFilter() {
   const b = document.getElementById('filter-body');
@@ -114,6 +164,11 @@ function filterAll(v) {
   syncUI(false);
 }
 
+function setKitTab(tab) {
+  kitTab = tab;
+  renderKit();
+}
+
 // ===== CSV IMPORT =====
 
 function importCSV() {
@@ -129,7 +184,39 @@ function importCSV() {
     let o = a.oppties.find(x => x.name === opp);
     if (!o) { o = { id: Date.now()+idx+100, name: opp, streams: [] }; a.oppties.push(o); }
     const stg = parseInt(stage) || 0;
-    o.streams.push({ id: `s-${Date.now()}-${idx}`, solId: prod, stage: stg, amount: parseInt(amt)||0, hurdle: 30, efforts: buildEfforts(stg) });
+    o.streams.push({ 
+      id: `s-${Date.now()}-${idx}`, solId: prod, stage: stg, amount: parseInt(amt)||0, hurdle: 30, 
+      stageEfforts: { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) },
+      timeline: []
+    });
+  });
+  syncUI(true);
+}
+
+function importActivityCSV() {
+  const input = document.getElementById('activity-csv-input').value;
+  if (!input) return;
+  input.trim().split('\n').forEach(line => {
+    const p = line.split(',').map(s => s.trim());
+    if (p.length < 6) return;
+    const [cus, opp, prod, date, name, memo] = p;
+    // Find target stream
+    accounts.forEach(a => {
+      if (a.customer !== cus) return;
+      a.oppties.forEach(o => {
+        if (o.name !== opp) return;
+        const s = o.streams.find(st => st.solId === prod);
+        if (s) {
+          if (!s.timeline) s.timeline = [];
+          s.timeline.push({ id: Date.now() + Math.random(), date, stage: s.stage, cat: 'engagement', name, memo });
+          // Check in checklist if exists
+          const key = 'e:' + name;
+          if (s.stageEfforts && s.stageEfforts[s.stage] && key in s.stageEfforts[s.stage]) {
+             s.stageEfforts[s.stage][key] = true;
+          }
+        }
+      });
+    });
   });
   syncUI(true);
 }
@@ -151,9 +238,9 @@ function addKitItem(stage, cat) {
   const name = cat === 'collateral' ? '새 자료' : '새 활동';
   kits[stage][cat].push(name);
   accounts.forEach(a => a.oppties.forEach(o => o.streams.forEach(s => {
-    if (s.stage === stage && s.efforts) {
-      s.efforts[(cat === 'collateral' ? 'c:' : 'e:') + name] = false;
-    }
+    if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
+    const key = (cat === 'collateral' ? 'c:' : 'e:') + name;
+    s.stageEfforts[stage][key] = false;
   })));
   renderKitMgr();
   syncUI(true);
@@ -164,7 +251,7 @@ function deleteKitItem(stage, cat, idx) {
   const key = (cat === 'collateral' ? 'c:' : 'e:') + oldName;
   kits[stage][cat].splice(idx, 1);
   accounts.forEach(a => a.oppties.forEach(o => o.streams.forEach(s => {
-    if (s.stage === stage && s.efforts) delete s.efforts[key];
+    if (s.stageEfforts) delete s.stageEfforts[stage][key];
   })));
   renderKitMgr();
   syncUI(true);
@@ -177,9 +264,12 @@ function renameKitItem(stage, cat, idx, newName) {
   const newKey = (cat === 'collateral' ? 'c:' : 'e:') + newName;
   kits[stage][cat][idx] = newName;
   accounts.forEach(a => a.oppties.forEach(o => o.streams.forEach(s => {
-    if (s.stage === stage && s.efforts && oldKey in s.efforts) {
-      s.efforts[newKey] = s.efforts[oldKey];
-      delete s.efforts[oldKey];
+    if (s.stageEfforts && oldKey in s.stageEfforts[stage]) {
+      s.stageEfforts[stage][newKey] = s.stageEfforts[stage][oldKey];
+      delete s.stageEfforts[stage][oldKey];
+    }
+    if (s.timeline) {
+      s.timeline.forEach(ev => { if(ev.stage === stage && ev.name === oldName) ev.name = newName; });
     }
   })));
   syncUI(true);

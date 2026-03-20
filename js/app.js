@@ -1,4 +1,4 @@
-/* ===== app.js — Event Bindings & Initialization ===== */
+/* ===== app.js — Event Bindings & Initialization (v6.0) ===== */
 
 // Map click handler
 document.getElementById('map-canvas').addEventListener('click', (e) => {
@@ -17,11 +17,15 @@ document.getElementById('map-canvas').addEventListener('click', (e) => {
 });
 
 // Window resize
-window.addEventListener('resize', () => syncUI(false));
+window.addEventListener('resize', () => {
+  syncUI(false);
+});
 
 // Initialize with demo data
-addAccount();
-accounts[0].industry = '금융';
-accounts[0].customer = 'A은행';
-addStream(accounts[0].id, accounts[0].oppties[0].id);
-syncUI(true);
+(function init() {
+  addAccount();
+  accounts[0].industry = '금융';
+  accounts[0].customer = 'A은행';
+  addStream(accounts[0].id, accounts[0].oppties[0].id);
+  syncUI(true);
+})();

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SA Sales Execution Map v5.2</title>
+<title>SA Sales Execution Map v6.0</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -14,8 +14,8 @@
 </div>
 
 <div class="container">
-  <h1>🎯 SA Sales Execution Map v5.2</h1>
-  <p class="subtitle">Modular Architecture — Clean, Maintainable, Production-Ready</p>
+  <h1>🎯 SA Sales Execution Map v6.0</h1>
+  <p class="subtitle">Activity Intelligence — Timeline + Swim Lane + Dashboards</p>
 
   <div class="main-layout">
     <!-- LEFT PANEL -->
@@ -70,9 +70,16 @@
 
       <!-- CSV Import -->
       <div class="csv-import-box">
-        <p style="font-size:0.65em; color:var(--text-muted); margin-bottom:5px;">CSV (산업,고객사,오퍼,제품,단계,금액)</p>
-        <textarea id="csv-input" class="csv-textarea" placeholder="금융,A은행,클라우드고도화,ocp,2,50000"></textarea>
-        <button class="btn-action" style="width:100%; font-size:0.7em;" onclick="importCSV()">데이터 불러오기</button>
+        <p style="font-size:0.65em; color:var(--text-muted); margin-bottom:5px;">📥 신규 데이터 불러오기 (Bulk)</p>
+        <textarea id="csv-input" class="csv-textarea" placeholder="금융,A은행,클라우드전환,ocp,2,50000"></textarea>
+        <button class="btn-action" style="width:100%; font-size:0.7em;" onclick="importCSV()">데이터 임포트</button>
+      </div>
+
+      <!-- Activity Log CSV -->
+      <div class="csv-import-box">
+        <p style="font-size:0.65em; color:var(--text-muted); margin-bottom:5px;">📜 활동 로그 불러오기 (Bulk)</p>
+        <textarea id="activity-csv-input" class="csv-textarea" placeholder="고객사,오퍼튜니티,제품,날짜,활동명,메모"></textarea>
+        <button class="btn-action" style="width:100%; font-size:0.7em;" onclick="importActivityCSV()">활동 로그 임포트</button>
       </div>
 
       <!-- Account List -->
@@ -94,13 +101,25 @@
         </div>
       </div>
 
-      <!-- Kit Panel (Checklist) -->
+      <!-- Swim Lane -->
+      <div class="swimlane-container" id="swimlane-container" style="display:none;">
+        <div class="swimlane-title" id="swimlane-title">🏊 Account Activity Swim Lane</div>
+        <div class="swimlane-wrap">
+          <canvas id="swimlane-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Kit Panel (Tabs) -->
       <div class="kit-panel" id="kit-panel">
-        <div id="kit-header" style="border-bottom:1px solid var(--border); padding-bottom:8px;">
+        <div id="kit-header" style="border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:10px;">
           <h4 id="kit-title" style="font-size:0.95em;"></h4>
           <div id="kit-meta" style="font-size:0.75em; margin-top:3px;"></div>
         </div>
-        <div class="kit-grid">
+        
+        <div class="kit-tabs" id="kit-tabs"></div>
+
+        <!-- Checklist View -->
+        <div class="kit-grid" id="kit-content">
           <div class="kit-box">
             <h5>📦 세일즈 자료 (Collateral)</h5>
             <div id="kit-collateral"></div>
@@ -110,13 +129,23 @@
             <div id="kit-engagement"></div>
           </div>
         </div>
+
+        <!-- Timeline View -->
+        <div id="timeline-content" style="display:none;"></div>
+
         <div class="effort-summary" id="effort-summary"></div>
+      </div>
+
+      <!-- Dashboard -->
+      <div class="dashboard-container">
+        <div class="config-title" style="color:var(--text-heading); cursor:default; margin-bottom:15px;">📊 Activity Dashboard</div>
+        <div id="dashboard-content"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Scripts (load order matters) -->
+<!-- Scripts -->
 <script src="js/data.js"></script>
 <script src="js/state.js"></script>
 <script src="js/render.js"></script>

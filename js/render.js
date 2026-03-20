@@ -1,10 +1,12 @@
-/* ===== render.js — All UI Rendering ===== */
+/* ===== render.js — All UI Rendering (v6.0) ===== */
 
 function syncUI(full = true) {
   renderFilter();
   if (full) renderAccountList();
   renderMap();
+  renderSwimLane();
   renderKit();
+  renderDashboard();
 }
 
 // ===== FILTER =====
@@ -57,7 +59,8 @@ function renderAccountList() {
         ${opp.streams.map(s => {
           const score = getEffortScore(s);
           const eColor = effortColor(score);
-          return `<div class="stream-item ${selectedStreamId===s.id?'active-stream':''}" onclick="selectStream('${s.id}')">
+          const isSel = selectedStreamId === s.id;
+          return `<div class="stream-item ${isSel?'active-stream':''}" onclick="selectStream('${s.id}')">
             <div class="stream-row">
               <select class="stream-select" style="flex:1" onchange="updateStream('${s.id}','solId',this.value)" onclick="event.stopPropagation()">
                 ${solutions.map(sol=>`<option value="${sol.id}" ${s.solId===sol.id?'selected':''}>${sol.name}</option>`).join('')}
@@ -84,11 +87,10 @@ function renderAccountList() {
 
 function renderMap() {
   const canvas = document.getElementById('map-canvas');
+  if(!canvas) return;
   const wrap = canvas.parentElement;
-  canvas.width = wrap.clientWidth * 2;
-  canvas.height = wrap.clientHeight * 2;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(2, 2);
+  canvas.width = wrap.clientWidth * 2; canvas.height = wrap.clientHeight * 2;
+  const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
   const W = wrap.clientWidth, H = wrap.clientHeight, pad = 60;
   ctx.clearRect(0, 0, W, H);
   const cs = getComputedStyle(document.documentElement);
@@ -96,29 +98,20 @@ function renderMap() {
   const tMax = parseInt(document.getElementById('cfg-total-max').value) || 300000;
   const colW = (W - 2*pad) / 4;
 
-  // Column backgrounds
-  for (let i = 0; i < 4; i++) {
-    ctx.fillStyle = i % 2 === 0 ? 'rgba(0,0,0,0.015)' : 'rgba(0,0,0,0.005)';
-    ctx.fillRect(pad + i*colW, pad, colW, H - 2*pad);
+  for(let i=0;i<4;i++){
+    ctx.fillStyle=i%2===0?'rgba(0,0,0,0.015)':'rgba(0,0,0,0.005)';
+    ctx.fillRect(pad+i*colW,pad,colW,H-2*pad);
   }
-
-  // Grid lines
-  ctx.strokeStyle = cs.getPropertyValue('--q-border').trim();
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(pad, H/2); ctx.lineTo(W-pad, H/2); ctx.stroke();
+  ctx.strokeStyle=cs.getPropertyValue('--q-border').trim(); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad,H/2); ctx.lineTo(W-pad,H/2); ctx.stroke();
   ctx.setLineDash([3, 3]);
   for (let i = 1; i < 4; i++) {
     ctx.beginPath(); ctx.moveTo(pad + i*colW, pad); ctx.lineTo(pad + i*colW, H-pad); ctx.stroke();
   }
   ctx.setLineDash([]);
-
-  // Stage labels
-  ctx.fillStyle = cs.getPropertyValue('--text-muted').trim();
-  ctx.font = 'bold 10px Segoe UI';
-  ctx.textAlign = 'center';
+  ctx.fillStyle=cs.getPropertyValue('--text-muted').trim(); ctx.font='bold 10px Segoe UI'; ctx.textAlign='center';
   stages.forEach((st, i) => ctx.fillText(`${stageIcons[i]} ${st}`, pad + i*colW + colW/2, H - pad + 15));
 
-  // Collect & jitter streams
   const slots = [[], [], [], []];
   accounts.forEach((acc, ai) => {
     const accTotal = acc.oppties.reduce((s, o) => s + o.streams.reduce((s2, st) => s2 + st.amount, 0), 0);
@@ -145,43 +138,95 @@ function renderMap() {
       const score = getEffortScore(s);
       const eColor = effortColor(score);
 
-      // Donut background ring
       ctx.beginPath(); ctx.arc(xPos, yPos, r + 3, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 4; ctx.stroke();
-
-      // Donut fill (effort arc)
       if (score > 0) {
-        ctx.beginPath();
-        ctx.arc(xPos, yPos, r + 3, -Math.PI/2, -Math.PI/2 + score * Math.PI * 2);
+        ctx.beginPath(); ctx.arc(xPos, yPos, r + 3, -Math.PI/2, -Math.PI/2 + score * Math.PI * 2);
         ctx.strokeStyle = eColor; ctx.lineWidth = 4; ctx.stroke();
       }
-
-      // Inner dot
       ctx.globalAlpha = isSel ? 1 : 0.85;
       ctx.fillStyle = color;
       if (isSel) { ctx.shadowBlur = 14; ctx.shadowColor = color; }
       ctx.beginPath(); ctx.arc(xPos, yPos, r, 0, Math.PI * 2); ctx.fill();
       ctx.shadowBlur = 0;
-
-      // Border
       ctx.strokeStyle = isSel ? '#000' : 'rgba(0,0,0,0.1)';
       ctx.lineWidth = isSel ? 2 : 1;
       ctx.beginPath(); ctx.arc(xPos, yPos, r, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 1;
-
-      // Label
       ctx.fillStyle = isSel ? cs.getPropertyValue('--text-heading') : cs.getPropertyValue('--text-dim');
-      ctx.font = isSel ? 'bold 10px Segoe UI' : '9px Segoe UI';
-      ctx.textAlign = 'center';
+      ctx.font = isSel ? 'bold 10px Segoe UI' : '9px Segoe UI'; ctx.textAlign = 'center';
       ctx.fillText(`${acc.customer}:${solutions.find(x => x.id === s.solId).name}`, xPos, yPos - r - 8);
-
-      // Store position for click detection
       s._rx = xPos; s._ry = yPos; s._rr = r;
     });
   });
 }
 
-// ===== KIT PANEL (Checklist) =====
+// ===== SWIM LANE =====
+
+function renderSwimLane() {
+  const container = document.getElementById('swimlane-container');
+  const canvas = document.getElementById('swimlane-canvas');
+  if(!canvas) return;
+  
+  // Find selected account
+  let selectedAcc = null;
+  accounts.forEach(a => a.oppties.forEach(o => {
+    if (o.streams.find(s => s.id === selectedStreamId)) selectedAcc = a;
+  }));
+
+  if (!selectedAcc || !selectedAcc.oppties.some(o => o.streams.some(s => s.timeline && s.timeline.length))) {
+    container.style.display = 'none'; return;
+  }
+  container.style.display = 'block';
+  document.getElementById('swimlane-title').innerText = `🏊 ${selectedAcc.customer} — Activity Swim Lane`;
+
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth * 2; canvas.height = 180 * 2;
+  const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
+  const W = wrap.clientWidth, H = 180, padX = 60, padY = 30;
+  ctx.clearRect(0,0,W,H);
+
+  // Collect all events for this account
+  const streamsWithEvents = [];
+  let minDate = new Date(), maxDate = new Date(0);
+  selectedAcc.oppties.forEach(o => o.streams.forEach(s => {
+    if (s.timeline && s.timeline.length) {
+      streamsWithEvents.push(s);
+      s.timeline.forEach(ev => {
+        const d = new Date(ev.date);
+        if (d < minDate) minDate = d;
+        if (d > maxDate) maxDate = d;
+      });
+    }
+  }));
+
+  if (maxDate < minDate) maxDate = new Date();
+  // Buffer dates
+  minDate.setDate(minDate.getDate() - 7);
+  maxDate.setDate(maxDate.getDate() + 7);
+  const timeSpan = maxDate - minDate;
+
+  // Draw lanes
+  const laneH = (H - 2 * padY) / streamsWithEvents.length;
+  streamsWithEvents.forEach((s, i) => {
+    const y = padY + i * laneH + laneH / 2;
+    ctx.strokeStyle = 'rgba(0,0,0,0.05)'; ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(W - 20, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#888'; ctx.font = '10px Segoe UI'; ctx.textAlign = 'right';
+    ctx.fillText(solutions.find(x=>x.id===s.solId).name, padX - 10, y + 3);
+
+    // Draw events
+    s.timeline.forEach(ev => {
+      const x = padX + ((new Date(ev.date) - minDate) / timeSpan) * (W - padX - 40);
+      ctx.fillStyle = ['#9e9e9e', '#2196f3', '#ff9800', '#4caf50'][ev.stage];
+      ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+    });
+  });
+}
+
+// ===== KIT PANEL (Checklist & Timeline) =====
 
 function renderKit() {
   const panel = document.getElementById('kit-panel');
@@ -203,34 +248,106 @@ function renderKit() {
   document.getElementById('kit-title').innerHTML = `🏢 [${acc.industry}] <b>${acc.customer}</b> — ${sol.name}`;
   document.getElementById('kit-meta').innerHTML = `오퍼튜니티: ${opp.name} | 단계: <b>${stages[stream.stage]}</b> | 금액: <b>${stream.amount.toLocaleString()}만원</b>`;
 
-  document.getElementById('kit-collateral').innerHTML = kit.collateral.map(item => {
-    const key = 'c:' + item;
-    const done = stream.efforts && stream.efforts[key];
-    return `<div class="check-item" onclick="event.stopPropagation();toggleEffort('${stream.id}','${key}')">
-      <div class="check-box ${done?'checked':''}">${done?'✓':''}</div>
-      <span class="check-label ${done?'done':''}">${item}</span>
-    </div>`;
-  }).join('');
+  // Tab Header
+  document.getElementById('kit-tabs').innerHTML = `
+    <div class="kit-tab ${kitTab==='checklist'?'active':''}" onclick="setKitTab('checklist')">✅ 체크리스트</div>
+    <div class="kit-tab ${kitTab==='timeline'?'active':''}" onclick="setKitTab('timeline')">📜 활동 이력 (${stream.timeline?stream.timeline.length:0})</div>
+  `;
 
-  document.getElementById('kit-engagement').innerHTML = kit.engagement.map(item => {
-    const key = 'e:' + item;
-    const done = stream.efforts && stream.efforts[key];
-    return `<div class="check-item" onclick="event.stopPropagation();toggleEffort('${stream.id}','${key}')">
-      <div class="check-box ${done?'checked':''}">${done?'✓':''}</div>
-      <span class="check-label ${done?'done':''}">${item}</span>
-    </div>`;
-  }).join('');
+  if (kitTab === 'checklist') {
+    document.getElementById('kit-content').style.display = 'grid';
+    document.getElementById('timeline-content').style.display = 'none';
 
-  const total = Object.keys(stream.efforts || {}).length;
-  const done = Object.values(stream.efforts || {}).filter(Boolean).length;
-  document.getElementById('effort-summary').innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.8em;">
-      <b>Effort Score</b>
-      <span style="color:${eColor};font-weight:800;font-size:1.1em;">${done}/${total} (${Math.round(score*100)}%)</span>
+    const renderItems = (items, cat) => items.map(item => {
+      const key = (cat==='c'?'c:':'e:') + item;
+      const done = stream.stageEfforts ? !!stream.stageEfforts[stream.stage][key] : !!stream.efforts[key];
+      const count = stream.timeline ? stream.timeline.filter(ev => ev.name === item).length : 0;
+      return `<div class="check-item" onclick="event.stopPropagation();toggleEffort('${stream.id}','${key}')">
+        <div class="check-box ${done?'checked':''}">${done?'✓':''}</div>
+        <span class="check-label ${done?'done':''}">${item}</span>
+        ${count > 0 ? `<span style="font-size:0.85em;color:var(--accent);font-weight:700;margin-left:5px;">×${count}</span>` : ''}
+        <button class="add-event-btn" onclick="event.stopPropagation();addTimelineEvent('${stream.id}','${cat==='c'?'collateral':'engagement'}','${item}')">＋</button>
+      </div>`;
+    }).join('');
+
+    document.getElementById('kit-collateral').innerHTML = renderItems(kit.collateral, 'c');
+    document.getElementById('kit-engagement').innerHTML = renderItems(kit.engagement, 'e');
+
+    const total = Object.keys(kit.collateral).length + Object.keys(kit.engagement).length;
+    const done = stream.stageEfforts ? Object.values(stream.stageEfforts[stream.stage]).filter(Boolean).length : 0;
+    document.getElementById('effort-summary').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.8em;">
+        <b>Effort Score</b>
+        <span style="color:${eColor};font-weight:800;font-size:1.1em;">${done}/${total} (${Math.round(score*100)}%)</span>
+      </div>
+      <div class="effort-summary-bar"><div class="effort-summary-fill" style="width:${score*100}%;background:${eColor}"></div></div>
+    `;
+  } else {
+    document.getElementById('kit-content').style.display = 'none';
+    document.getElementById('timeline-content').style.display = 'block';
+    
+    if (!stream.timeline || !stream.timeline.length) {
+      document.getElementById('timeline-content').innerHTML = '<p style="padding:20px;text-align:center;color:#888;font-size:0.8em;">기록된 활동이 없습니다. 체크리스트를 완료하거나 [＋] 버튼을 누르세요.</p>';
+    } else {
+      document.getElementById('timeline-content').innerHTML = `
+        <div class="timeline-list">
+          ${stream.timeline.slice().reverse().map(ev => `
+            <div class="timeline-item">
+              <div class="tl-date">${ev.date.substring(5)}</div>
+              <div class="tl-name"><b>${ev.name}</b></div>
+              <div class="tl-memo">${ev.memo || ''}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    document.getElementById('effort-summary').innerHTML = '';
+  }
+}
+
+// ===== DASHBOARD =====
+
+function renderDashboard() {
+  const dash = document.getElementById('dashboard-content');
+  let totalEvents = 0, thisMonth = 0, activeDeals = 0;
+  const now = new Date();
+  const monthStr = now.toISOString().substring(0, 7);
+  const accountStats = {};
+
+  accounts.forEach(a => {
+    let accEvents = 0;
+    a.oppties.forEach(o => {
+      activeDeals += o.streams.length;
+      o.streams.forEach(s => {
+        if (s.timeline) {
+          totalEvents += s.timeline.length;
+          accEvents += s.timeline.length;
+          s.timeline.forEach(ev => { if(ev.date.startsWith(monthStr)) thisMonth++; });
+        }
+      });
+    });
+    if (accEvents > 0) accountStats[a.customer] = accEvents;
+  });
+
+  const topAccs = Object.entries(accountStats).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
+  dash.innerHTML = `
+    <div class="dash-grid">
+      <div class="dash-stat"><span>총 활동</span><strong>${totalEvents}건</strong></div>
+      <div class="dash-stat"><span>이번 달</span><strong>${thisMonth}건</strong></div>
+      <div class="dash-stat"><span>활성 딜</span><strong>${activeDeals}건</strong></div>
     </div>
-    <div class="effort-summary-bar"><div class="effort-summary-fill" style="width:${score*100}%;background:${eColor}"></div></div>
-    <p style="font-size:0.7em;color:var(--text-muted);margin-top:6px;">
-      ${score>=0.7?'✅ 다음 단계 승격 준비 완료':score>=0.4?'⚠️ 핵심 활동이 남아있습니다':'🚨 초기 단계 — 투입 가속 필요'}
-    </p>
+    <div style="margin-top:15px; font-size:0.8em;">
+      <b>🥇 Top 5 Active Accounts</b>
+      ${topAccs.map(([name, count]) => `
+        <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
+          <div style="width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</div>
+          <div style="flex:1; height:8px; background:#eee; border-radius:4px;">
+            <div style="width:${(count/topAccs[0][1])*100}%; height:100%; background:var(--accent); border-radius:4px;"></div>
+          </div>
+          <div style="width:30px; text-align:right;">${count}</div>
+        </div>
+      `).join('')}
+    </div>
   `;
 }
