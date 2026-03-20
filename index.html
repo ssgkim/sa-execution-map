@@ -80,11 +80,14 @@
 
         <!-- Activity Log CSV -->
         <div class="csv-import-box">
-          <p style="font-size:0.65em; color:var(--text-muted); margin-bottom:5px;">📜 활동 로그 불러오기 (Bulk)</p>
+          <p style="font-size:0.65em; color:var(--text-muted); margin-bottom:5px;">📜 활동 로그 (Timeline Bulk)</p>
           <textarea id="activity-csv-input" class="csv-textarea"
             placeholder="고객사,오퍼튜니티,제품,단계(0~3),날짜,활동명,메모"></textarea>
-          <button class="btn-action" style="width:100%; font-size:0.7em;" onclick="importActivityCSV()">활동 로그
-            임포트</button>
+          <div style="display:flex; gap:5px; margin-top:5px;">
+            <button class="btn-action" style="flex:1; font-size:0.7em;" onclick="importActivityCSV()">클라우드 전송</button>
+            <button class="btn-action" style="flex:1; font-size:0.7em; background:#FF9800;"
+              onclick="exportTimelineCSV()">내역 전체 복사</button>
+          </div>
         </div>
 
         <!-- Account List -->

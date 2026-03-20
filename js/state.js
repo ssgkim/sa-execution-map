@@ -168,7 +168,9 @@ function addTimelineEvent(sid, cat, name, vStage) {
 
 async function syncTimelineUpdateToCloud(customer, opportunity, solId, stage, name, oldDate, updates) {
   if (!GAS_WEB_APP_URL) return;
+  const badge = document.getElementById('sync-badge');
   try {
+    if (badge) badge.textContent = '🔄';
     await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -178,7 +180,40 @@ async function syncTimelineUpdateToCloud(customer, opportunity, solId, stage, na
         update: updates
       })
     });
-  } catch (e) { console.error('Update Timeline Sync Error:', e); }
+    if (badge) badge.textContent = '☁️';
+  } catch (e) {
+    console.error('Update Timeline Sync Error:', e);
+    if (badge) badge.textContent = '⚠️';
+  }
+}
+
+function exportTimelineCSV() {
+  let csv = [];
+  accounts.forEach(a => {
+    a.oppties.forEach(o => {
+      o.streams.forEach(s => {
+        if (s.timeline) {
+          s.timeline.forEach(ev => {
+            const memo = String(ev.memo || '').replace(/,/g, ' '); // 콤마 텍스트 방어
+            csv.push(`${a.customer},${o.name},${s.solId},${ev.stage},${ev.date},${ev.name},${memo}`);
+          });
+        }
+      });
+    });
+  });
+
+  const csvStr = csv.join('\n');
+  const ta = document.getElementById('activity-csv-input');
+  if (ta) {
+    ta.value = csvStr;
+    ta.select();
+    try {
+      document.execCommand('copy');
+      alert('현재 화면의 모든 타임라인 데이터가 CSV 형식으로 텍스트 박스에 추출되고 클립보드에 복사되었습니다!\n\n이 텍스트를 구글 스프레드시트 Timeline 탭에 그대로 붙여넣기 하시면 완벽하게 수동 동기화됩니다.');
+    } catch (e) {
+      alert('데이터가 텍스트 박스에 추출되었습니다. 수동으로 복사해주세요.');
+    }
+  }
 }
 
 function updateTimelineEvent(sid, evId, field, val) {

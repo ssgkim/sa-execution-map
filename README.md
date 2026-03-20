@@ -38,6 +38,7 @@ sa-execution-map/
 - ☁️ Google Sheets 기반 Cloud Sync 자동화
 - 🔧 솔루션/어카운트/인더스트리 양방향 가시성 필터 (Visibility Toggles)
 - 🏊 스윔레인(Swimlane) 시간 축(X-Axis) 및 날짜 조정 Drag & Drop
+- 📋 타임라인 클립보드 전체 복사를 통한 수동 구글 시트 백업 (Failsafe) 지원
 - 🌗 Dark/Light 테마
 
 ## 배포
