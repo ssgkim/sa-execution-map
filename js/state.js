@@ -48,7 +48,7 @@ function addAccount() {
 function updateAccount(id, field, val) {
   const a = accounts.find(x => x.id === id);
   if (a) a[field] = val;
-  syncUI(false);
+  syncUI(field === 'industry');
 }
 
 function updateOpp(aId, oId, val) {
