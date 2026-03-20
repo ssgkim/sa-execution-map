@@ -26,18 +26,13 @@ async function init() {
   const data = await fetchCloudData();
 
   if (data && data.kits && data.kits.length > 0) {
-    kits = {
-      0: { collateral: [], engagement: [] },
-      1: { collateral: [], engagement: [] },
-      2: { collateral: [], engagement: [] },
-      3: { collateral: [], engagement: [] }
-    };
-    data.kits.forEach(k => {
-      const st = k.stage;
-      const c = k.cat === 'engagement' ? 'engagement' : 'collateral';
-      if (kits[st]) kits[st][c].push(String(k.name).trim());
-    });
-    console.log('☁️ 동적 세일즈 킷 로드 완료:', data.kits.length, '개 항목');
+    kits = data.kits.map(k => ({
+      solId: String(k.solId || '*').trim(),
+      stage: parseInt(k.stage) || 0,
+      cat: k.cat === 'engagement' ? 'engagement' : 'collateral',
+      name: String(k.name).trim()
+    }));
+    console.log('☁️ 동적 세일즈 킷 로드 완료:', kits.length, '개 항목');
   }
 
   if (data && data.accounts && data.accounts.length > 0) {
