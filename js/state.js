@@ -2,7 +2,7 @@
 
 let accounts = [];
 let selectedStreamId = null;
-let activeFilters = new Set();
+let activeFilters = new Set(solutions.map(s => s.id));
 let kitMgrStage = 0;
 let kitTab = 'checklist'; // 'checklist' | 'timeline'
 let kitViewStage = null; // null = follow stream.stage
