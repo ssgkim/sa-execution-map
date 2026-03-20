@@ -103,13 +103,23 @@ function toggleEffort(sid, key, vStage) {
         
         const exists = s.timeline.some(ev => ev.date === date && ev.stage === targetStage && ev.name === name);
         if (!exists) {
-          s.timeline.push({
+          const newEvent = {
             id: Date.now(),
             date: date,
             stage: targetStage,
             cat: cat,
             name: name,
             memo: '체크리스트 완료'
+          };
+          s.timeline.push(newEvent);
+          
+          // Cloud Sync (v7.0)
+          postTimelineToCloud({
+            accountId: sid, // stream id as account linkage
+            date: newEvent.date,
+            type: 'event',
+            stage: newEvent.stage,
+            content: `[${cat}] ${newEvent.name}`
           });
         }
       }
@@ -124,14 +134,25 @@ function addTimelineEvent(sid, cat, name, vStage) {
     if (s) {
       const targetStage = vStage !== undefined ? vStage : s.stage;
       if (!s.timeline) s.timeline = [];
-      s.timeline.push({
+      const newEvent = {
         id: Date.now(),
         date: new Date().toISOString().split('T')[0],
         stage: targetStage,
         cat: cat,
         name: name,
         memo: ''
+      };
+      s.timeline.push(newEvent);
+      
+      // Cloud Sync (v7.0)
+      postTimelineToCloud({
+        accountId: sid,
+        date: newEvent.date,
+        type: 'memo',
+        stage: newEvent.stage,
+        content: newEvent.name
       });
+
       const key = (cat === 'collateral' ? 'c:' : 'e:') + name;
       if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
       s.stageEfforts[targetStage][key] = true;

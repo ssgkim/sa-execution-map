@@ -21,11 +21,20 @@ window.addEventListener('resize', () => {
   syncUI(false);
 });
 
-// Initialize with demo data
-(function init() {
-  addAccount();
-  accounts[0].industry = '금융';
-  accounts[0].customer = 'A은행';
-  addStream(accounts[0].id, accounts[0].oppties[0].id);
+// Initialize with Cloud Data (v7.0)
+async function init() {
+  const data = await fetchCloudData();
+  if (data && data.accounts && data.accounts.length > 0) {
+    // TODO: GAS에서 넘어온 평탄화된 데이터를 트리 구조로 변환하는 로직 필요
+    // 일단은 통신 성공 여부만 확인하고 브리핑용으로 유지
+    // accounts = transformCloudToTree(data.accounts); 
+    console.log('☁️ 클라우드 데이터 로드 완료');
+  } else {
+    addAccount();
+    accounts[0].industry = '금융';
+    accounts[0].customer = 'A은행';
+    addStream(accounts[0].id, accounts[0].oppties[0].id);
+  }
   syncUI(true);
-})();
+}
+init();
