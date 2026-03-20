@@ -245,6 +245,30 @@ function renderSwimLane() {
   ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(padX, H - 20); ctx.lineTo(W - 20, H - 20); ctx.stroke();
 
+  const dayMs = 1000 * 60 * 60 * 24;
+  const totalDays = timeSpan / dayMs;
+  let stepDays = 1;
+  if (totalDays > 365 * 2) stepDays = 365;
+  else if (totalDays > 180) stepDays = 30;
+  else if (totalDays > 60) stepDays = 14;
+  else if (totalDays > 21) stepDays = 7;
+  else if (totalDays > 7) stepDays = 2;
+
+  ctx.fillStyle = cs.getPropertyValue('--text-dim') || '#888';
+  ctx.font = '10px Segoe UI'; ctx.textAlign = 'center';
+
+  let curr = new Date(minDate);
+  while (curr <= maxDate) {
+    const px = padX + ((curr - minDate) / timeSpan) * (W - padX - 40);
+    ctx.beginPath(); ctx.moveTo(px, H - 20); ctx.lineTo(px, H - 15); ctx.stroke();
+    let label = '';
+    if (stepDays >= 365) label = curr.getFullYear() + '년';
+    else if (stepDays >= 30) label = `${curr.getFullYear()}.${String(curr.getMonth() + 1).padStart(2, '0')}`;
+    else label = `${curr.getMonth() + 1}/${curr.getDate()}`;
+    ctx.fillText(label, px, H - 5);
+    curr.setDate(curr.getDate() + stepDays);
+  }
+
   const laneH = (H - padY - 30) / streamsWithEvents.length;
   streamsWithEvents.forEach((s, i) => {
     const y = padY + i * laneH;
