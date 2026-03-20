@@ -1,4 +1,4 @@
-# SA Sales Execution Map v7.1
+# SA Sales Execution Map v7.2
 
 Red Hat SA 세일즈 파이프라인 시각화 & 실행 전략 도구
 
