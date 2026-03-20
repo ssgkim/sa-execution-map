@@ -262,7 +262,7 @@ function importCSV() {
     const p = line.split(',').map(s => s.trim());
     if (p.length < 6) return;
     const [ind, cus, opp, prod, stage, amt] = p;
-    let a = accounts.find(x => x.customer === cus);
+    let a = accounts.find(x => x.customer === cus && x.industry === ind);
     if (!a) { a = { id: Date.now() + idx, industry: ind, customer: cus, oppties: [], active: true }; accounts.push(a); }
     let o = a.oppties.find(x => x.name === opp);
     if (!o) { o = { id: Date.now() + idx + 100, name: opp, streams: [] }; a.oppties.push(o); }
@@ -382,7 +382,7 @@ function transformCloudToTree(flatData, timelineData = []) {
   const tree = [];
   flatData.forEach((row, idx) => {
     // row: { industry, customer, opportunity, product, stage, amount }
-    let a = tree.find(x => x.customer === row.customer);
+    let a = tree.find(x => x.customer === row.customer && x.industry === row.industry);
     if (!a) {
       a = { id: Date.now() + idx, industry: row.industry, customer: row.customer, oppties: [], active: true };
       tree.push(a);
