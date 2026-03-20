@@ -7,7 +7,7 @@ const solutions = [
   { id:'edge', name:'Edge' }, { id:'migration', name:'Migration' }
 ];
 
-const stages = ['Early Sales', 'Proposal / PoC', 'Pilot', 'Production'];
+const stages = ['얼리세일즈', '제안 PoC', '파일럿', '프로덕션'];
 const stageIcons = ['🔍', '📝', '🧪', '🚀'];
 
 // Editable kit items per pipeline stage

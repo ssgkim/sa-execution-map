@@ -1,4 +1,4 @@
-/* ===== render.js — All UI Rendering (v6.0) ===== */
+/* ===== render.js — All UI Rendering (v6.3) ===== */
 
 function syncUI(full = true) {
   renderFilter();
@@ -168,7 +168,6 @@ function renderSwimLane() {
   const canvas = document.getElementById('swimlane-canvas');
   if(!canvas) return;
   
-  // Find selected account
   let selectedAcc = null;
   accounts.forEach(a => a.oppties.forEach(o => {
     if (o.streams.find(s => s.id === selectedStreamId)) selectedAcc = a;
@@ -214,11 +213,9 @@ function renderSwimLane() {
   maxDate.setDate(maxDate.getDate() + 5);
   const timeSpan = maxDate - minDate;
 
-  // Draw Time Axis
   ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(padX, H - 20); ctx.lineTo(W - 20, H - 20); ctx.stroke();
   
-  // Draw lanes
   const laneH = (H - padY - 30) / streamsWithEvents.length;
   streamsWithEvents.forEach((s, i) => {
     const y = padY + i * laneH;
@@ -230,7 +227,6 @@ function renderSwimLane() {
     ctx.fillStyle = '#666'; ctx.font = 'bold 10px Segoe UI'; ctx.textAlign = 'right';
     ctx.fillText(solutions.find(x=>x.id===s.solId).name, padX - 10, y + 3);
 
-    // Draw events on this lane
     if (s.timeline) {
       s.timeline.forEach(ev => {
         const x = padX + ((new Date(ev.date) - minDate) / timeSpan) * (W - padX - 40);
@@ -240,7 +236,6 @@ function renderSwimLane() {
         ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
         
-        // Event Label (Vertical)
         ctx.save();
         ctx.translate(x, y - 8);
         ctx.rotate(-Math.PI/4);
@@ -267,75 +262,113 @@ function renderKit() {
 
   panel.style.display = 'block';
   const sol = solutions.find(x => x.id === stream.solId);
-  const kit = kits[stream.stage];
   const score = getEffortScore(stream);
   const eColor = effortColor(score);
 
   document.getElementById('kit-title').innerHTML = `🏢 [${acc.industry}] <b>${acc.customer}</b> — ${sol.name}`;
-  document.getElementById('kit-meta').innerHTML = `오퍼튜니티: ${opp.name} | 단계: <b>${stages[stream.stage]}</b> | 금액: <b>${stream.amount.toLocaleString()}만원</b>`;
+  document.getElementById('kit-meta').innerHTML = `오퍼튜니티: ${opp.name} | 딜 단계: <b>${stages[stream.stage]}</b> | 금액: <b>${stream.amount.toLocaleString()}만원</b>`;
 
-  // Tab Header
   document.getElementById('kit-tabs').innerHTML = `
-    <div class="kit-tab ${kitTab==='checklist'?'active':''}" onclick="setKitTab('checklist')">✅ 체크리스트</div>
+    <div class="kit-tab ${kitTab==='checklist'?'active':''}" onclick="setKitTab('checklist')">✅ 체크리스트 관리</div>
     <div class="kit-tab ${kitTab==='timeline'?'active':''}" onclick="setKitTab('timeline')">📜 활동 이력 (${stream.timeline?stream.timeline.length:0})</div>
   `;
 
   if (kitTab === 'checklist') {
-    document.getElementById('kit-content').style.display = 'grid';
     document.getElementById('timeline-content').style.display = 'none';
+    const cCont = document.getElementById('kit-content');
+    cCont.style.display = 'block';
+    
+    const vStage = kitViewStage !== null ? kitViewStage : stream.stage;
+    const kit = kits[vStage];
+    
+    let subTabsHtml = `<div class="kit-sub-tabs">` + stages.map((st, i) => `
+      <div class="kit-sub-tab ${vStage === i ? 'active' : ''}" onclick="setKitViewStage(${i})">
+        ${stageIcons[i]} ${st}
+      </div>
+    `).join('') + `</div>`;
 
     const renderItems = (items, cat) => items.map(item => {
       const key = (cat==='c'?'c:':'e:') + item;
-      const stageKey = stream.stage;
-      const done = stream.stageEfforts ? !!stream.stageEfforts[stageKey][key] : false;
-      const count = stream.timeline ? stream.timeline.filter(ev => ev.name === item && ev.stage === stageKey).length : 0;
-      return `<div class="check-item" onclick="event.stopPropagation();toggleEffort('${stream.id}','${key}')">
+      const done = stream.stageEfforts ? !!stream.stageEfforts[vStage][key] : false;
+      const count = stream.timeline ? stream.timeline.filter(ev => ev.name === item && ev.stage === vStage).length : 0;
+      return `<div class="check-item" onclick="event.stopPropagation();toggleEffort('${stream.id}','${key}', ${vStage})">
         <div class="check-box ${done?'checked':''}">${done?'✓':''}</div>
         <span class="check-label ${done?'done':''}">${item}</span>
         ${count > 0 ? `<span class="badge-count">×${count}</span>` : ''}
-        <button class="add-event-btn" onclick="event.stopPropagation();addTimelineEvent('${stream.id}','${cat==='c'?'collateral':'engagement'}','${item}')">＋</button>
+        <button class="add-event-btn" onclick="event.stopPropagation();addTimelineEvent('${stream.id}','${cat==='c'?'collateral':'engagement'}','${item}', ${vStage})">＋</button>
       </div>`;
     }).join('');
 
-    document.getElementById('kit-collateral').innerHTML = renderItems(kit.collateral, 'c');
-    document.getElementById('kit-engagement').innerHTML = renderItems(kit.engagement, 'e');
+    cCont.innerHTML = `
+      ${subTabsHtml}
+      <div class="kit-grid" style="margin-top:10px;">
+        <div class="kit-box">
+          <h5>📦 세일즈 자료 (Collateral)</h5>
+          ${renderItems(kit.collateral, 'c')}
+        </div>
+        <div class="kit-box">
+          <h5>🤝 활동 (Engagement)</h5>
+          ${renderItems(kit.engagement, 'e')}
+        </div>
+      </div>
+    `;
 
     const total = Object.keys(kit.collateral).length + Object.keys(kit.engagement).length;
-    const done = stream.stageEfforts ? Object.values(stream.stageEfforts[stream.stage]).filter(Boolean).length : 0;
+    const done = stream.stageEfforts ? Object.values(stream.stageEfforts[vStage]).filter(Boolean).length : 0;
+    const sScore = total ? done/total : 0;
     document.getElementById('effort-summary').innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.8em;">
-        <b>Effort Score</b>
-        <span style="color:${eColor};font-weight:800;font-size:1.1em;">${done}/${total} (${Math.round(score*100)}%)</span>
+        <b>${stages[vStage]} 달성도</b>
+        <span style="color:${effortColor(sScore)};font-weight:800;font-size:1.1em;">${done}/${total} (${Math.round(sScore*100)}%)</span>
       </div>
-      <div class="effort-summary-bar"><div class="effort-summary-fill" style="width:${score*100}%;background:${eColor}"></div></div>
+      <div class="effort-summary-bar"><div class="effort-summary-fill" style="width:${sScore*100}%;background:${effortColor(sScore)}"></div></div>
     `;
   } else {
     document.getElementById('kit-content').style.display = 'none';
-    document.getElementById('timeline-content').style.display = 'block';
+    const tCont = document.getElementById('timeline-content');
+    tCont.style.display = 'block';
     
     if (!stream.timeline || !stream.timeline.length) {
-      document.getElementById('timeline-content').innerHTML = '<p style="padding:20px;text-align:center;color:#888;font-size:0.8em;">기록된 활동이 없습니다. 체크리스트를 완료하거나 [＋] 버튼을 누르세요.</p>';
+      tCont.innerHTML = '<p style="padding:20px;text-align:center;color:#888;font-size:0.8em;">기록된 활동이 없습니다. 체크리스트를 완료하거나 [＋] 버튼을 누르세요.</p>';
     } else {
-      // 날짜별 내림차순 정렬
-      const sortedEvents = [...stream.timeline].sort((a, b) => new Date(b.date) - new Date(a.date));
+      const grouped = {0:[], 1:[], 2:[], 3:[]};
+      stream.timeline.forEach(ev => grouped[ev.stage].push(ev));
       
-      document.getElementById('timeline-content').innerHTML = `
-        <div class="timeline-list">
-          ${sortedEvents.map(ev => `
-            <div class="timeline-item stage-${ev.stage}">
-              <div class="tl-stage-badge">${stageIcons[ev.stage]} ${stages[ev.stage]}</div>
-              <div class="tl-content">
-                <div class="tl-header">
-                  <span class="tl-date">${ev.date}</span>
-                  <span class="tl-name">${ev.name}</span>
-                  <button class="tl-del" onclick="event.stopPropagation();deleteTimelineEvent('${stream.id}', ${ev.id})">✕</button>
+      let tlHtml = `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+        <button class="btn-action ${timelineEditMode?'edit-active':''}" style="font-size:0.7em;padding:4px 8px;" onclick="toggleTimelineEdit()">
+          ${timelineEditMode?'✅ 수정 완료':'✏️ 이력 수정'}
+        </button>
+      </div><div class="timeline-list">`;
+      
+      [0, 1, 2, 3].forEach(st => {
+        if (grouped[st].length === 0) return;
+        grouped[st].sort((a,b) => new Date(b.date) - new Date(a.date));
+        tlHtml += `
+          <div class="timeline-group stage-${st}">
+            <div class="tl-group-header">${stageIcons[st]} ${stages[st]}</div>
+            <div class="tl-group-body">
+              ${grouped[st].map(ev => `
+                <div class="timeline-item">
+                  <div class="tl-header">
+                    ${timelineEditMode 
+                      ? `<input type="date" class="tl-date-input" value="${ev.date}" onchange="updateTimelineEvent('${stream.id}', ${ev.id}, 'date', this.value)">` 
+                      : `<span class="tl-date">${ev.date}</span>`
+                    }
+                    <span class="tl-name">${ev.name}</span>
+                    ${timelineEditMode ? `<button class="tl-del" onclick="event.stopPropagation();deleteTimelineEvent('${stream.id}', ${ev.id})">✕</button>` : ''}
+                  </div>
+                  ${timelineEditMode
+                    ? `<input type="text" class="tl-memo-input" value="${ev.memo || ''}" placeholder="메모 입력..." onchange="updateTimelineEvent('${stream.id}', ${ev.id}, 'memo', this.value)">`
+                    : (ev.memo ? `<div class="tl-memo">${ev.memo}</div>` : '<div class="tl-memo empty-memo">메모 없음</div>')
+                  }
                 </div>
-                <div class="tl-memo">${ev.memo || '메모 없음'}</div>
-              </div>
+              `).join('')}
             </div>
-          `).join('')}
-        </div>
-      `;
+          </div>
+        `;
+      });
+      tlHtml += '</div>';
+      tCont.innerHTML = tlHtml;
     }
     document.getElementById('effort-summary').innerHTML = '';
   }

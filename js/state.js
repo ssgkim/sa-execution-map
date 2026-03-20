@@ -1,10 +1,12 @@
-/* ===== state.js — State Management (v6.0) ===== */
+/* ===== state.js — State Management (v6.3) ===== */
 
 let accounts = [];
 let selectedStreamId = null;
-let activeFilters = new Set(solutions.map(s => s.id));
+let activeFilters = new Set();
 let kitMgrStage = 0;
 let kitTab = 'checklist'; // 'checklist' | 'timeline'
+let kitViewStage = null; // null = follow stream.stage
+let timelineEditMode = false;
 
 // Build default effort checklist for a given stage
 function buildEfforts(stage) {
@@ -64,6 +66,8 @@ function addStream(aId, oId) {
     timeline: []
   });
   selectedStreamId = sid;
+  kitViewStage = null;
+  timelineEditMode = false;
   syncUI(true);
 }
 
@@ -72,7 +76,6 @@ function updateStream(sid, field, val) {
     const s = o.streams.find(x => x.id === sid);
     if (s) {
       s[field] = val;
-      // Handle legacy efforts if any
       if (!s.stageEfforts) {
         s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
         if (s.efforts) s.stageEfforts[s.stage] = s.efforts;
@@ -82,28 +85,27 @@ function updateStream(sid, field, val) {
   syncUI(false);
 }
 
-function toggleEffort(sid, key) {
+function toggleEffort(sid, key, vStage) {
   accounts.forEach(a => a.oppties.forEach(o => {
     const s = o.streams.find(x => x.id === sid);
     if (s) {
+      const targetStage = vStage !== undefined ? vStage : s.stage;
       if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
-      const currentVal = !!s.stageEfforts[s.stage][key];
-      s.stageEfforts[s.stage][key] = !currentVal;
+      const currentVal = !!s.stageEfforts[targetStage][key];
+      s.stageEfforts[targetStage][key] = !currentVal;
       
-      // Auto-record to timeline when checked
       if (!currentVal) {
         if (!s.timeline) s.timeline = [];
         const name = key.substring(2);
         const cat = key.startsWith('c:') ? 'collateral' : 'engagement';
         const date = new Date().toISOString().split('T')[0];
         
-        // 중복 방지: 동일 날짜, 동일 단계, 동일 활동명이 이미 존재하면 기록하지 않음
-        const exists = s.timeline.some(ev => ev.date === date && ev.stage === s.stage && ev.name === name);
+        const exists = s.timeline.some(ev => ev.date === date && ev.stage === targetStage && ev.name === name);
         if (!exists) {
           s.timeline.push({
             id: Date.now(),
             date: date,
-            stage: s.stage,
+            stage: targetStage,
             cat: cat,
             name: name,
             memo: '체크리스트 완료'
@@ -115,24 +117,34 @@ function toggleEffort(sid, key) {
   syncUI(false);
 }
 
-function addTimelineEvent(sid, cat, name) {
+function addTimelineEvent(sid, cat, name, vStage) {
   accounts.forEach(a => a.oppties.forEach(o => {
     const s = o.streams.find(x => x.id === sid);
     if (s) {
+      const targetStage = vStage !== undefined ? vStage : s.stage;
       if (!s.timeline) s.timeline = [];
-      const memo = prompt('활동 메모를 입력하세요 (선택사항):');
       s.timeline.push({
         id: Date.now(),
         date: new Date().toISOString().split('T')[0],
-        stage: s.stage,
+        stage: targetStage,
         cat: cat,
         name: name,
-        memo: memo || ''
+        memo: ''
       });
-      // Ensure it's marked in checklist too
       const key = (cat === 'collateral' ? 'c:' : 'e:') + name;
       if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
-      s.stageEfforts[s.stage][key] = true;
+      s.stageEfforts[targetStage][key] = true;
+    }
+  }));
+  syncUI(false);
+}
+
+function updateTimelineEvent(sid, evId, field, val) {
+  accounts.forEach(a => a.oppties.forEach(o => {
+    const s = o.streams.find(x => x.id === sid);
+    if (s && s.timeline) {
+      const ev = s.timeline.find(e => e.id === evId);
+      if (ev) ev[field] = val;
     }
   }));
   syncUI(false);
@@ -156,7 +168,7 @@ function deleteStream(aId, oId, sid) {
   syncUI(true);
 }
 
-function selectStream(id) { selectedStreamId = id; syncUI(true); }
+function selectStream(id) { selectedStreamId = id; kitViewStage = null; timelineEditMode = false; syncUI(true); }
 
 // ===== FILTER & TAB ACTIONS =====
 
@@ -182,6 +194,16 @@ function filterAll(v) {
 
 function setKitTab(tab) {
   kitTab = tab;
+  renderKit();
+}
+
+function setKitViewStage(stage) {
+  kitViewStage = stage;
+  renderKit();
+}
+
+function toggleTimelineEdit() {
+  timelineEditMode = !timelineEditMode;
   renderKit();
 }
 
@@ -224,7 +246,11 @@ function importActivityCSV() {
         const s = o.streams.find(st => st.solId === prod);
         if (s) {
           if (!s.timeline) s.timeline = [];
-          s.timeline.push({ id: Date.now() + Math.random(), date, stage: s.stage, cat: 'engagement', name, memo });
+          // 중복 방지 로직 추가
+          const exists = s.timeline.some(ev => ev.date === date && ev.stage === s.stage && ev.name === name);
+          if (!exists) {
+            s.timeline.push({ id: Date.now() + Math.random(), date, stage: s.stage, cat: 'engagement', name, memo });
+          }
           // Check in checklist if exists
           const key = 'e:' + name;
           if (s.stageEfforts && s.stageEfforts[s.stage] && key in s.stageEfforts[s.stage]) {

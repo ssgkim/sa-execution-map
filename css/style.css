@@ -130,3 +130,30 @@ canvas { width: 100%; height: 100%; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* v6.3 Additions: Checklist Sub-tabs */
+.kit-sub-tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 2px solid var(--border); }
+.kit-sub-tab { padding: 4px 10px; font-size: 0.7em; font-weight: 700; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: 4px 4px 0 0; }
+.kit-sub-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--bg-hover); }
+
+/* v6.3 Additions: Timeline Grouping */
+.timeline-group { margin-bottom: 15px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+.tl-group-header { padding: 6px 12px; font-size: 0.8em; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 0.5px; }
+.stage-0 .tl-group-header { background: #9e9e9e; }
+.stage-1 .tl-group-header { background: #2196f3; }
+.stage-2 .tl-group-header { background: #ff9800; }
+.stage-3 .tl-group-header { background: #4caf50; }
+.tl-group-body { padding: 8px; display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.01); }
+
+.timeline-item { padding: 8px; background: var(--bg); border-radius: 6px; border-left: 3px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.stage-0 .timeline-item { border-left-color: #9e9e9e; }
+.stage-1 .timeline-item { border-left-color: #2196f3; }
+.stage-2 .timeline-item { border-left-color: #ff9800; }
+.stage-3 .timeline-item { border-left-color: #4caf50; }
+
+.tl-date-input { background: var(--bg-hover); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px; font-size: 0.8em; color: var(--accent); outline: none; font-weight: 800; }
+.tl-memo-input { width: 100%; background: var(--bg-hover); border: 1px dashed var(--border); border-radius: 4px; padding: 4px 6px; font-size: 0.8em; color: var(--text); outline: none; margin-top: 4px; }
+.tl-memo-input:focus { border-color: var(--accent); }
+.empty-memo { color: var(--border) !important; font-style: italic; }
+
+.edit-active { background: var(--green) !important; border-color: var(--green) !important; color: white !important; }
