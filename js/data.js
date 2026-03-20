@@ -10,8 +10,8 @@ const solutions = [
 const stages = ['Early Sales', 'Proposal / PoC', 'Pilot', 'Production'];
 const stageIcons = ['🔍', '📝', '🧪', '🚀'];
 
-// Editable kit items per pipeline stage
-const kits = {
+// Editable kit items per pipeline stage (Fallback defaults)
+let kits = {
   0: {
     collateral: ['Discovery 질문지', '1-Pager', '성공사례 요약'],
     engagement: ['Discovery Session', 'Roadshow', 'Account Day']
