@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SA Sales Execution Map v4.5</title>
+<style>
+  :root {
+    --bg: #ffffff; --bg-card: #f9f9fb; --bg-hover: #f1f1f4;
+    --border: #e0e0e0; --border-hover: #cccccc; --text: #333333; --text-dim: #666666;
+    --text-muted: #999999; --text-heading: #000000; --accent: #EE0000; --accent-bg: rgba(238,0,0,0.08);
+    --q-border: #eeeeee; --tooltip-bg: #ffffff; --rec-bg: #fef5f5; --rec-border: #f0c0c0;
+  }
+  [data-theme="dark"] {
+    --bg: #0f0f14; --bg-card: rgba(255,255,255,0.03); --bg-hover: rgba(255,255,255,0.06);
+    --border: #222; --border-hover: #444; --text: #e0e0e0; --text-dim: #888;
+    --text-muted: #555; --text-heading: #fff; --accent: #EE0000; --accent-bg: rgba(238,0,0,0.15);
+    --q-border: #2a2a2a; --tooltip-bg: #1e1e28; --rec-bg: rgba(238,0,0,0.05); --rec-border: rgba(238,0,0,0.2);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', -apple-system, sans-serif; background: var(--bg); color: var(--text); transition: background 0.3s, color 0.3s; overflow-x: hidden; }
+  .container { max-width: 1550px; margin: 0 auto; padding: 16px; }
+  h1 { text-align: center; font-size: 1.4em; margin-bottom: 2px; color: var(--text-heading); }
+  .subtitle { text-align: center; font-size: 0.8em; color: var(--text-dim); margin-bottom: 20px; }
+
+  .theme-switcher { position: fixed; top: 12px; right: 16px; z-index: 200; display: flex; gap: 6px; padding: 6px 10px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; backdrop-filter: blur(8px); }
+  .theme-btn { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; }
+  .theme-btn.active { border-color: var(--accent); }
+  .theme-btn[data-t="dark"] { background: #0f0f14; }
+  .theme-btn[data-t="light"] { background: #ffffff; }
+
+  .main-layout { display: grid; grid-template-columns: 420px 1fr; gap: 20px; }
+
+  /* Left Panel */
+  .left-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; max-height: 90vh; overflow-y: auto; }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .btn-action { padding: 4px 10px; font-size: 0.75em; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent-bg); color: var(--accent); cursor: pointer; }
+  .btn-action:hover { background: var(--accent); color: #fff; }
+
+  /* Y-Axis Scale Config */
+  .config-section { background: var(--accent-bg); border: 1px solid var(--rec-border); border-radius: 8px; padding: 10px; margin-bottom: 15px; }
+  .config-title { font-size: 0.8em; font-weight: 800; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+  .config-row { display: flex; gap: 10px; }
+  .config-item { flex: 1; }
+  .config-label { font-size: 0.65em; color: var(--text-dim); margin-bottom: 3px; display: block; }
+  .config-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 4px; font-size: 0.75em; outline: none; }
+  .config-input:focus { border-color: var(--accent); }
+
+  /* Solution Filter */
+  .filter-section { border-bottom: 1px solid var(--border); margin-bottom: 15px; padding-bottom: 10px; }
+  .filter-title { font-size: 0.85em; font-weight: 700; color: var(--text-dim); margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; }
+  .sol-tag-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+  .sol-tag { padding: 2px 6px; font-size: 0.65em; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; background: var(--bg); }
+  .sol-tag.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+
+  /* CSV Import */
+  .csv-import-box { background: rgba(0,0,0,0.05); border: 1px dashed var(--border); border-radius: 8px; padding: 8px; margin-bottom: 15px; }
+  .csv-textarea { width: 100%; height: 50px; background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); font-size: 0.65em; padding: 5px; resize: none; margin-bottom: 5px; }
+
+  /* Account Hierarchy */
+  .account-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+  .acc-header { display: flex; gap: 5px; margin-bottom: 8px; }
+  .acc-input { background: var(--bg-hover); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; color: var(--text); font-size: 0.75em; outline: none; }
+  .acc-input:focus { border-color: var(--accent); }
+  .acc-input.industry { width: 80px; }
+  .acc-input.customer { flex: 1; font-weight: 700; }
+  
+  .oppty-box { border-left: 2px solid var(--border); margin-left: 8px; padding-left: 8px; margin-bottom: 10px; }
+  .oppty-header { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
+  .oppty-name-input { background: none; border: none; border-bottom: 1px solid transparent; color: var(--text-dim); font-size: 0.75em; width: 100%; outline: none; padding: 2px; }
+  .oppty-name-input:focus { border-bottom-color: var(--accent); color: var(--text-heading); }
+
+  .stream-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px; cursor: pointer; transition: 0.2s; }
+  .stream-item:hover { border-color: var(--border-hover); }
+  .stream-item.active-stream { border-color: var(--accent); background: var(--accent-bg); }
+  
+  .stream-row { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; }
+  .stream-select { background: var(--bg-hover); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.7em; padding: 2px; outline: none; }
+  .stream-amount { width: 80px; text-align: right; }
+  .stream-hurdle-row { display: flex; align-items: center; gap: 6px; font-size: 0.65em; color: var(--text-muted); }
+  .hurdle-range { flex: 1; accent-color: var(--accent); height: 12px; }
+
+  /* Right Panel */
+  .right-panel { display: flex; flex-direction: column; gap: 20px; }
+  .map-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; position: relative; }
+  .canvas-wrap { position: relative; width: 100%; aspect-ratio: 1.7; background: #ffffff; border: 1px solid var(--q-border); border-radius: 10px; overflow: hidden; }
+  [data-theme="dark"] .canvas-wrap { background: #0f0f14; }
+  canvas { width: 100%; height: 100%; }
+  
+  .map-label { position: absolute; font-size: 0.7em; font-weight: 800; opacity: 0.4; pointer-events: none; text-transform: uppercase; }
+  .label-y { writing-mode: vertical-lr; left: 10px; top: 50%; transform: translateY(-50%) rotate(180deg); }
+  .label-x { bottom: 10px; left: 50%; transform: translateX(-50%); }
+
+  /* Action Kit */
+  .kit-panel { background: var(--rec-bg); border: 1px solid var(--rec-border); border-radius: 12px; padding: 16px; display: none; }
+  .kit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
+  .kit-box { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+  .kit-box h5 { font-size: 0.7em; color: var(--text-dim); margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 3px; text-transform: uppercase; }
+  .kit-item { display: flex; align-items: flex-start; gap: 6px; font-size: 0.75em; margin-bottom: 4px; }
+  .kit-icon { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="theme-switcher">
+  <div class="theme-btn active" data-t="light" onclick="setTheme('light')"></div>
+  <div class="theme-btn" data-t="dark" onclick="setTheme('dark')"></div>
+</div>
+
+<div class="container">
+  <h1>🎯 SA Sales Execution Map v4.5</h1>
+  <p class="subtitle">Clean Presentation Mode — Presentation-Ready Analytics</p>
+
+  <div class="main-layout">
+    <div class="left-panel">
+      <div class="config-section">
+        <div class="config-title">🚀 Y축 전략 스케일 설정</div>
+        <div class="config-row">
+          <div class="config-item">
+            <label class="config-label">Single Max (만원)</label>
+            <input type="number" class="config-input" id="cfg-single-max" value="10000" oninput="syncUI(false)">
+          </div>
+          <div class="config-item">
+            <label class="config-label">Account Total Max (만원)</label>
+            <input type="number" class="config-input" id="cfg-total-max" value="30000" oninput="syncUI(false)">
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-title" onclick="toggleFilter()">
+          <span>🔧 솔루션 필터</span>
+          <span id="filter-icon">▼</span>
+        </div>
+        <div id="filter-body" style="display:none;">
+          <div class="sol-tag-grid" id="filter-grid"></div>
+          <div style="margin-top:8px; display:flex; gap:5px;">
+            <button class="btn-action" style="flex:1; font-size:0.65em;" onclick="filterAll(true)">전체</button>
+            <button class="btn-action" style="flex:1; font-size:0.65em;" onclick="filterAll(false)">해제</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-header">
+        <h3>🏢 계정 및 파이프라인</h3>
+        <button class="btn-action" onclick="addAccount()">＋ 계정 추가</button>
+      </div>
+
+      <div class="csv-import-box">
+        <p style="font-size:0.65em; color:var(--text-muted); margin-bottom:5px;">CSV Bulk Import (산업,고객사,오퍼,제품,단계,금액)</p>
+        <textarea id="csv-input" class="csv-textarea" placeholder="금융,A은행,클라우드고도화,ocp,2,50000"></textarea>
+        <button class="btn-action" style="width:100%; font-size:0.7em;" onclick="importCSV()">데이터 불러오기</button>
+      </div>
+
+      <div id="account-list"></div>
+    </div>
+
+    <div class="right-panel">
+      <div class="map-container">
+        <div class="canvas-wrap">
+          <canvas id="map-canvas"></canvas>
+          <div class="map-label label-y">Strategic Account Value ↑</div>
+          <div class="map-label label-x">Pipeline Stage →</div>
+          
+          <div style="position:absolute; top:15px; right:15px; color:#4CAF50; font-size:0.75em; font-weight:800; opacity:0.6;">🎯 PRIORITY</div>
+          <div style="position:absolute; top:15px; left:50px; color:#FF9800; font-size:0.75em; font-weight:800; opacity:0.6;">🌱 NURTURE</div>
+          <div style="position:absolute; bottom:40px; left:50px; color:#9E9E9E; font-size:0.75em; font-weight:800; opacity:0.6;">🔍 EXPLORE</div>
+          <div style="position:absolute; bottom:40px; right:15px; color:#2196F3; font-size:0.75em; font-weight:800; opacity:0.6;">🏆 HARVEST</div>
+        </div>
+      </div>
+
+      <div class="kit-panel" id="kit-panel">
+        <div id="kit-header" style="border-bottom:1px solid var(--border); padding-bottom:8px;">
+          <h4 id="kit-title" style="font-size:0.95em;"></h4>
+          <div id="kit-meta" style="font-size:0.75em; margin-top:3px;"></div>
+        </div>
+        <div class="kit-grid">
+          <div class="kit-box">
+            <h5>📦 세일즈 자료 (Collateral)</h5>
+            <div id="kit-collateral"></div>
+          </div>
+          <div class="kit-box">
+            <h5>🤝 추천 활동 (Engagement)</h5>
+            <div id="kit-engagement"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const solutions = [
+  { id:'ocp', name:'OpenShift (OCP)' }, { id:'ocp-virt', name:'OCP Virt' }, { id:'rhel', name:'RHEL' },
+  { id:'rhoai', name:'OpenShift AI' }, { id:'aap', name:'Ansible' }, { id:'acs', name:'ACS (Security)' },
+  { id:'acm', name:'ACM (Mgmt)' }, { id:'middleware', name:'Middleware' }, { id:'storage', name:'Storage' },
+  { id:'edge', name:'Edge' }, { id:'migration', name:'Migration' }
+];
+const stages = ['Early Sales', 'Proposal / PoC', 'Pilot', 'Production'];
+const stageIcons = ['🔍', '📝', '🧪', '🚀'];
+const kits = {
+  'Early Sales': { collateral: ['Discovery 질문지', '1-Pager', '성공사례 요약'], engagement: ['Discovery Session', 'Roadshow'] },
+  'Proposal / PoC': { collateral: ['Ref Architecture', 'PoC 시나리오', '경쟁비교표'], engagement: ['Demo', 'Navigate Workshop'] },
+  'Pilot': { collateral: ['구축 체크리스트', 'KPI 합의서', '마이그레이션 플랜'], engagement: ['Hands-on (심화)', '운영 온보딩'] },
+  'Production': { collateral: ['확산 로드맵', '표준 운영 가이드', '성과 보고서'], engagement: ['전략 리뷰', '챔피언 육성'] }
+};
+const colors = ['#EE0000','#2196F3','#4CAF50','#FF9800','#9C27B0','#00BCD4','#FF5722','#8BC34A','#E91E63','#009688'];
+
+// ===== STATE =====
+let accounts = [];
+let selectedStreamId = null;
+let activeFilters = new Set(solutions.map(s => s.id));
+
+function syncUI(full = true) {
+  renderFilter();
+  if (full) renderAccountList();
+  renderMap();
+  renderKit();
+}
+
+// ===== ACTIONS =====
+function addAccount() {
+  const id = Date.now();
+  accounts.push({ id, industry:'산업', customer:'고객사', oppties: [{ id: id+1, name:'신규 오퍼튜니티', streams:[] }] });
+  syncUI(true);
+}
+function updateAccount(id, field, val) {
+  const acc = accounts.find(a => a.id === id);
+  if (acc) acc[field] = val;
+  syncUI(false);
+}
+function updateOpp(accId, oppId, val) {
+  const acc = accounts.find(a => a.id === accId);
+  const opp = acc.oppties.find(o => o.id === oppId);
+  if (opp) opp.name = val;
+  syncUI(false);
+}
+function addStream(accId, oppId) {
+  const acc = accounts.find(a => a.id === accId);
+  const opp = acc.oppties.find(o => o.id === oppId);
+  const sid = `s-${Date.now()}`;
+  opp.streams.push({ id: sid, solId:'ocp', stage:0, amount:1000, hurdle:30 });
+  selectedStreamId = sid;
+  syncUI(true);
+}
+function updateStream(sid, field, val) {
+  accounts.forEach(acc => acc.oppties.forEach(opp => {
+    const s = opp.streams.find(x => x.id === sid);
+    if (s) s[field] = val;
+  }));
+  syncUI(false);
+}
+function deleteStream(accId, oppId, sid) {
+  const acc = accounts.find(a => a.id === accId);
+  const opp = acc.oppties.find(o => o.id === oppId);
+  opp.streams = opp.streams.filter(x => x.id !== sid);
+  if (selectedStreamId === sid) selectedStreamId = null;
+  syncUI(true);
+}
+function toggleFilter() {
+  const body = document.getElementById('filter-body');
+  const icon = document.getElementById('filter-icon');
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  icon.textContent = isHidden ? '▲' : '▼';
+}
+function toggleSolFilter(id) {
+  if (activeFilters.has(id)) activeFilters.delete(id);
+  else activeFilters.add(id);
+  syncUI(false);
+}
+function filterAll(val) {
+  if (val) solutions.forEach(s => activeFilters.add(s.id));
+  else activeFilters.clear();
+  syncUI(false);
+}
+function importCSV() {
+  const input = document.getElementById('csv-input').value;
+  if (!input) return;
+  const lines = input.trim().split('\n');
+  accounts = [];
+  lines.forEach((line, idx) => {
+    const parts = line.split(',').map(s => s.trim());
+    if (parts.length < 6) return;
+    const [ind, cus, opp, prod, stage, amt] = parts;
+    let acc = accounts.find(a => a.customer === cus);
+    if (!acc) {
+      acc = { id: Date.now()+idx, industry: ind, customer: cus, oppties: [] };
+      accounts.push(acc);
+    }
+    let op = acc.oppties.find(o => o.name === opp);
+    if (!op) {
+      op = { id: Date.now()+idx+100, name: opp, streams: [] };
+      acc.oppties.push(op);
+    }
+    op.streams.push({ id: `s-${Date.now()}-${idx}`, solId: prod, stage: parseInt(stage)||0, amount: parseInt(amt)||0, hurdle: 30 });
+  });
+  syncUI(true);
+}
+
+// ===== RENDERERS =====
+function renderFilter() {
+  const grid = document.getElementById('filter-grid');
+  grid.innerHTML = solutions.map(s => `
+    <div class="sol-tag ${activeFilters.has(s.id)?'active':''}" onclick="toggleSolFilter('${s.id}')">${s.name}</div>
+  `).join('');
+}
+
+function renderAccountList() {
+  const list = document.getElementById('account-list');
+  list.innerHTML = accounts.map((acc, ai) => `
+    <div class="account-card" style="border-top: 3px solid ${colors[ai % colors.length]}">
+      <div class="acc-header">
+        <input class="acc-input industry" value="${acc.industry}" oninput="updateAccount(${acc.id}, 'industry', this.value)" onclick="event.stopPropagation()">
+        <input class="acc-input customer" value="${acc.customer}" oninput="updateAccount(${acc.id}, 'customer', this.value)" onclick="event.stopPropagation()">
+      </div>
+      ${acc.oppties.map(opp => `
+        <div class="oppty-box">
+          <div class="oppty-header">
+            <input class="oppty-name-input" value="${opp.name}" oninput="updateOpp(${acc.id}, ${opp.id}, this.value)" onclick="event.stopPropagation()" placeholder="오퍼튜니티 명칭">
+          </div>
+          ${opp.streams.map(s => `
+            <div class="stream-item ${selectedStreamId===s.id?'active-stream':''}" onclick="selectStream('${s.id}')">
+              <div class="stream-row">
+                <select class="stream-select" style="flex:1" onchange="updateStream('${s.id}', 'solId', this.value)" onclick="event.stopPropagation()">
+                  ${solutions.map(sol => `<option value="${sol.id}" ${s.solId===sol.id?'selected':''}>${sol.name}</option>`).join('')}
+                </select>
+                <select class="stream-select" onchange="updateStream('${s.id}', 'stage', parseInt(this.value))" onclick="event.stopPropagation()">
+                  ${stages.map((st, i) => `<option value="${i}" ${s.stage===i?'selected':''}>${stageIcons[i]}</option>`).join('')}
+                </select>
+                <input class="acc-input stream-amount" type="number" value="${s.amount}" oninput="updateStream('${s.id}', 'amount', parseInt(this.value))" onclick="event.stopPropagation()">
+                <button class="btn-del-opp" style="font-size:0.7em" onclick="event.stopPropagation(); deleteStream(${acc.id}, ${opp.id}, '${s.id}')">✕</button>
+              </div>
+              <div class="stream-hurdle-row">
+                <label>Hurdle</label>
+                <input type="range" class="hurdle-range" min="0" max="100" value="${s.hurdle}" oninput="updateStream('${s.id}', 'hurdle', parseInt(this.value))" onclick="event.stopPropagation()">
+                <span>${s.hurdle}%</span>
+              </div>
+            </div>
+          `).join('')}
+          <button class="btn-action" style="font-size:0.65em; padding:2px 6px" onclick="addStream(${acc.id}, ${opp.id})">＋ 스트림</button>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function selectStream(id) { selectedStreamId = id; syncUI(true); }
+
+function renderMap() {
+  const canvas = document.getElementById('map-canvas');
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth * 2; canvas.height = wrap.clientHeight * 2;
+  const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
+  const W = wrap.clientWidth, H = wrap.clientHeight, pad = 50;
+  ctx.clearRect(0, 0, W, H);
+  const cs = getComputedStyle(document.documentElement);
+
+  const sMax = parseInt(document.getElementById('cfg-single-max').value) || 10000;
+  const tMax = parseInt(document.getElementById('cfg-total-max').value) || 30000;
+
+  ctx.strokeStyle = cs.getPropertyValue('--q-border').trim();
+  ctx.lineWidth = 1; ctx.beginPath();
+  ctx.moveTo(W/2, pad); ctx.lineTo(W/2, H-pad);
+  ctx.moveTo(pad, H/2); ctx.lineTo(W-pad, H/2); ctx.stroke();
+
+  accounts.forEach((acc, ai) => {
+    const color = colors[ai % colors.length];
+    const accTotal = acc.oppties.reduce((sum, o) => sum + o.streams.reduce((s, st) => s + st.amount, 0), 0);
+    acc.oppties.forEach(opp => {
+      opp.streams.forEach(s => {
+        if (!activeFilters.has(s.solId)) return;
+        const xPos = pad + (s.stage / 3) * (W - 2*pad);
+        const yVal = (Math.min(1, s.amount / sMax)*0.6) + (Math.min(1, accTotal / tMax)*0.4);
+        const yPos = (H - pad) - yVal * (H - 2*pad);
+        const isSelected = s.id === selectedStreamId;
+        ctx.fillStyle = color;
+        if (isSelected) { ctx.shadowBlur = 12; ctx.shadowColor = color; }
+        ctx.beginPath(); ctx.arc(xPos, yPos, isSelected ? 9 : 6, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = isSelected ? cs.getPropertyValue('--text-heading') : cs.getPropertyValue('--text-dim');
+        ctx.font = isSelected ? 'bold 10px Segoe UI' : '9px Segoe UI';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${acc.customer}:${solutions.find(x=>x.id===s.solId).name}`, xPos, yPos - (isSelected ? 14 : 10));
+      });
+    });
+  });
+}
+
+function renderKit() {
+  const panel = document.getElementById('kit-panel');
+  if (!selectedStreamId) { panel.style.display = 'none'; return; }
+  let stream = null, acc = null, opp = null;
+  accounts.forEach(a => a.oppties.forEach(o => {
+    const s = o.streams.find(x => x.id === selectedStreamId);
+    if (s) { stream = s; acc = a; opp = o; }
+  }));
+  if (!stream) return;
+  panel.style.display = 'block';
+  const sol = solutions.find(x => x.id === stream.solId);
+  const stage = stages[stream.stage];
+  const kit = kits[stage];
+  document.getElementById('kit-title').innerHTML = `🏢 [${acc.industry}] <b>${acc.customer}</b> — ${sol.name}`;
+  document.getElementById('kit-meta').innerHTML = `오퍼튜니티: ${opp.name} | 단계: <b>${stage}</b> | 금액: <b>${stream.amount.toLocaleString()}만원</b>`;
+  document.getElementById('kit-collateral').innerHTML = kit.collateral.map(i => `<div class="kit-item"><span class="kit-icon">📄</span> ${i}</div>`).join('');
+  document.getElementById('kit-engagement').innerHTML = kit.engagement.map(i => `<div class="kit-item"><span class="kit-icon">🔥</span> ${i}</div>`).join('');
+}
+
+function setTheme(t) {
+  if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  else document.documentElement.removeAttribute('data-theme');
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+  setTimeout(() => syncUI(true), 50);
+}
+
+document.getElementById('map-canvas').addEventListener('click', (e) => {
+  const rect = e.target.getBoundingClientRect();
+  const x = (e.clientX - rect.left);
+  const y = (e.clientY - rect.top);
+  const pad = 50, W = rect.width, H = rect.height;
+  const sMax = parseInt(document.getElementById('cfg-single-max').value) || 10000;
+  const tMax = parseInt(document.getElementById('cfg-total-max').value) || 30000;
+  let closest = null, minDiff = 20;
+  accounts.forEach(acc => {
+    const accTotal = acc.oppties.reduce((sum, o) => sum + o.streams.reduce((s, st) => s + st.amount, 0), 0);
+    acc.oppties.forEach(opp => {
+      opp.streams.forEach(s => {
+        if (!activeFilters.has(s.solId)) return;
+        const xPos = pad + (s.stage / 3) * (W - 2*pad);
+        const yVal = (Math.min(1, s.amount / sMax)*0.6) + (Math.min(1, accTotal / tMax)*0.4);
+        const yPos = (H - pad) - yVal * (H - 2*pad);
+        const diff = Math.sqrt((xPos - x)**2 + (yPos - y)**2);
+        if (diff < minDiff) { minDiff = diff; closest = s.id; }
+      });
+    });
+  });
+  if (closest) { selectedStreamId = closest; syncUI(true); }
+});
+
+// Init
+addAccount();
+accounts[0].industry = '금융'; accounts[0].customer = 'A은행';
+addStream(accounts[0].id, accounts[0].oppties[0].id);
+syncUI(true);
+</script>
+</body>
+</html>
