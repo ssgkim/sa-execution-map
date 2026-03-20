@@ -1,4 +1,4 @@
-# SA Sales Execution Map v7.3
+# SA Sales Execution Map v7.4
 
 Red Hat SA 세일즈 파이프라인 시각화 & 실행 전략 도구
 
@@ -39,6 +39,9 @@ sa-execution-map/
 - 🔧 솔루션/어카운트/인더스트리 양방향 가시성 필터 (Visibility Toggles)
 - 🏊 스윔레인(Swimlane) 시간 축(X-Axis) 및 날짜 조정 Drag & Drop
 - 📋 타임라인 클립보드 전체 복사를 통한 수동 구글 시트 백업 (Failsafe) 지원
+- 🧠 NBA(Next Best Action) 추천 — 미완료 체크리스트 갭 기반 자동 추천
+- 🎯 제품별 세일즈 킷 필터링 (와일드카드 + 제품 전용 병합)
+- ☁️ 동적 킷 오버라이드 — Google Sheets 메타데이터로 원격 킷 관리
 - 🌗 Dark/Light 테마
 
 ## 배포
