@@ -119,7 +119,10 @@ function toggleEffort(sid, key, vStage) {
             date: newEvent.date,
             type: 'event',
             stage: newEvent.stage,
-            content: `[${cat}] ${newEvent.name}`
+            content: `[${cat}] ${newEvent.name}`,
+            customer: a.customer,
+            opportunity: o.name,
+            solId: s.solId
           });
         }
       }
@@ -150,7 +153,10 @@ function addTimelineEvent(sid, cat, name, vStage) {
         date: newEvent.date,
         type: 'memo',
         stage: newEvent.stage,
-        content: newEvent.name
+        content: newEvent.name,
+        customer: a.customer,
+        opportunity: o.name,
+        solId: s.solId
       });
 
       const key = (cat === 'collateral' ? 'c:' : 'e:') + name;
