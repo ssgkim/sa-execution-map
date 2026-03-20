@@ -124,28 +124,42 @@ function renderMap() {
   ctx.fillStyle = cs.getPropertyValue('--text-muted').trim(); ctx.font = 'bold 10px Segoe UI'; ctx.textAlign = 'center';
   stages.forEach((st, i) => ctx.fillText(`${stageIcons[i]} ${st}`, pad + i * colW + colW / 2, H - pad + 15));
 
-  const slots = [[], [], [], []];
+  // 1. 전체 데이터 기준으로 모든 스트림의 고정(절대) 좌표 먼저 계산
+  const allSlots = [[], [], [], []];
   accounts.forEach((acc, ai) => {
-    if (acc.active === false || inactiveIndustries.has(acc.industry)) return;
     const accTotal = acc.oppties.reduce((s, o) => s + o.streams.reduce((s2, st) => s2 + st.amount, 0), 0);
     acc.oppties.forEach(opp => opp.streams.forEach(s => {
-      if (!activeFilters.has(s.solId)) return;
-      slots[s.stage].push({ s, acc, ai, accTotal });
+      allSlots[s.stage].push({ s, acc, ai, accTotal });
     }));
   });
 
-  slots.forEach((sl, si) => {
+  allSlots.forEach((sl, si) => {
     const cx = pad + si * colW + colW / 2;
     const jR = colW * 0.35;
     sl.forEach((item, idx) => {
-      const { s, acc, ai, accTotal } = item;
-      const color = colors[ai % colors.length];
+      const { s, accTotal } = item;
       const jSeed = (idx - (sl.length - 1) / 2);
       const jStep = sl.length > 1 ? jR / (sl.length - 1) : 0;
-      const xPos = cx + jSeed * jStep;
+      s._rx = cx + jSeed * jStep;
       const yVal = (Math.min(1, s.amount / sMax) * 0.6) + (Math.min(1, accTotal / tMax) * 0.4);
-      const yPos = (H - pad) - yVal * (H - 2 * pad);
-      const baseR = 5 + Math.min(7, (s.amount / sMax) * 7);
+      s._ry = (H - pad) - yVal * (H - 2 * pad);
+      s._rr = 5 + Math.min(7, (s.amount / sMax) * 7);
+    });
+  });
+
+  // 2. 가시성 필터(Account, Industry, Solution)를 적용하여 그리기만 수행
+  allSlots.forEach(sl => {
+    sl.forEach(item => {
+      const { s, acc, ai } = item;
+
+      // 필터 적용
+      if (acc.active === false || inactiveIndustries.has(acc.industry)) return;
+      if (!activeFilters.has(s.solId)) return;
+
+      const color = colors[ai % colors.length];
+      const xPos = s._rx;
+      const yPos = s._ry;
+      const baseR = s._rr;
       const isSel = s.id === selectedStreamId;
       const r = isSel ? baseR + 3 : baseR;
       const score = getEffortScore(s);
@@ -169,7 +183,6 @@ function renderMap() {
       ctx.fillStyle = isSel ? cs.getPropertyValue('--text-heading') : cs.getPropertyValue('--text-dim');
       ctx.font = isSel ? 'bold 10px Segoe UI' : '9px Segoe UI'; ctx.textAlign = 'center';
       ctx.fillText(`${acc.customer}:${solutions.find(x => x.id === s.solId).name}`, xPos, yPos - r - 8);
-      s._rx = xPos; s._ry = yPos; s._rr = r;
     });
   });
 }
