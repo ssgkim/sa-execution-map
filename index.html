@@ -3,101 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SA Sales Execution Map v4.5</title>
+<title>SA Sales Execution Map v5.0</title>
 <style>
   :root {
     --bg: #ffffff; --bg-card: #f9f9fb; --bg-hover: #f1f1f4;
     --border: #e0e0e0; --border-hover: #cccccc; --text: #333333; --text-dim: #666666;
     --text-muted: #999999; --text-heading: #000000; --accent: #EE0000; --accent-bg: rgba(238,0,0,0.08);
-    --q-border: #eeeeee; --tooltip-bg: #ffffff; --rec-bg: #fef5f5; --rec-border: #f0c0c0;
+    --q-border: #eeeeee; --rec-bg: #fef5f5; --rec-border: #f0c0c0;
+    --green: #4CAF50; --orange: #FF9800; --red: #f44336;
   }
   [data-theme="dark"] {
     --bg: #0f0f14; --bg-card: rgba(255,255,255,0.03); --bg-hover: rgba(255,255,255,0.06);
     --border: #222; --border-hover: #444; --text: #e0e0e0; --text-dim: #888;
     --text-muted: #555; --text-heading: #fff; --accent: #EE0000; --accent-bg: rgba(238,0,0,0.15);
-    --q-border: #2a2a2a; --tooltip-bg: #1e1e28; --rec-bg: rgba(238,0,0,0.05); --rec-border: rgba(238,0,0,0.2);
+    --q-border: #2a2a2a; --rec-bg: rgba(238,0,0,0.05); --rec-border: rgba(238,0,0,0.2);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', -apple-system, sans-serif; background: var(--bg); color: var(--text); transition: background 0.3s, color 0.3s; overflow-x: hidden; }
+  body { font-family: 'Segoe UI', -apple-system, sans-serif; background: var(--bg); color: var(--text); }
   .container { max-width: 1550px; margin: 0 auto; padding: 16px; }
   h1 { text-align: center; font-size: 1.4em; margin-bottom: 2px; color: var(--text-heading); }
   .subtitle { text-align: center; font-size: 0.8em; color: var(--text-dim); margin-bottom: 20px; }
 
-  .theme-switcher { position: fixed; top: 12px; right: 16px; z-index: 200; display: flex; gap: 6px; padding: 6px 10px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; backdrop-filter: blur(8px); }
+  .theme-switcher { position: fixed; top: 12px; right: 16px; z-index: 200; display: flex; gap: 6px; padding: 6px 10px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; }
   .theme-btn { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; }
   .theme-btn.active { border-color: var(--accent); }
   .theme-btn[data-t="dark"] { background: #0f0f14; }
-  .theme-btn[data-t="light"] { background: #ffffff; }
+  .theme-btn[data-t="light"] { background: #fff; }
 
   .main-layout { display: grid; grid-template-columns: 420px 1fr; gap: 20px; }
 
-  /* Left Panel */
   .left-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; max-height: 90vh; overflow-y: auto; }
   .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
   .btn-action { padding: 4px 10px; font-size: 0.75em; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent-bg); color: var(--accent); cursor: pointer; }
   .btn-action:hover { background: var(--accent); color: #fff; }
 
-  /* Y-Axis Scale Config */
   .config-section { background: var(--accent-bg); border: 1px solid var(--rec-border); border-radius: 8px; padding: 10px; margin-bottom: 15px; }
-  .config-title { font-size: 0.8em; font-weight: 800; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+  .config-title { font-size: 0.8em; font-weight: 800; color: var(--accent); margin-bottom: 8px; }
   .config-row { display: flex; gap: 10px; }
   .config-item { flex: 1; }
   .config-label { font-size: 0.65em; color: var(--text-dim); margin-bottom: 3px; display: block; }
   .config-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 4px; font-size: 0.75em; outline: none; }
   .config-input:focus { border-color: var(--accent); }
 
-  /* Solution Filter */
   .filter-section { border-bottom: 1px solid var(--border); margin-bottom: 15px; padding-bottom: 10px; }
-  .filter-title { font-size: 0.85em; font-weight: 700; color: var(--text-dim); margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; }
-  .sol-tag-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+  .filter-title { font-size: 0.85em; font-weight: 700; color: var(--text-dim); cursor: pointer; display: flex; justify-content: space-between; }
+  .sol-tag-grid { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
   .sol-tag { padding: 2px 6px; font-size: 0.65em; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; background: var(--bg); }
   .sol-tag.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
 
-  /* CSV Import */
-  .csv-import-box { background: rgba(0,0,0,0.05); border: 1px dashed var(--border); border-radius: 8px; padding: 8px; margin-bottom: 15px; }
+  .csv-import-box { background: rgba(0,0,0,0.03); border: 1px dashed var(--border); border-radius: 8px; padding: 8px; margin-bottom: 15px; }
   .csv-textarea { width: 100%; height: 50px; background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); font-size: 0.65em; padding: 5px; resize: none; margin-bottom: 5px; }
 
-  /* Account Hierarchy */
-  .account-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+  .account-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-bottom: 15px; }
   .acc-header { display: flex; gap: 5px; margin-bottom: 8px; }
   .acc-input { background: var(--bg-hover); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; color: var(--text); font-size: 0.75em; outline: none; }
   .acc-input:focus { border-color: var(--accent); }
   .acc-input.industry { width: 80px; }
   .acc-input.customer { flex: 1; font-weight: 700; }
-  
   .oppty-box { border-left: 2px solid var(--border); margin-left: 8px; padding-left: 8px; margin-bottom: 10px; }
-  .oppty-header { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
   .oppty-name-input { background: none; border: none; border-bottom: 1px solid transparent; color: var(--text-dim); font-size: 0.75em; width: 100%; outline: none; padding: 2px; }
   .oppty-name-input:focus { border-bottom-color: var(--accent); color: var(--text-heading); }
-
-  .stream-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px; cursor: pointer; transition: 0.2s; }
+  .stream-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px; cursor: pointer; }
   .stream-item:hover { border-color: var(--border-hover); }
   .stream-item.active-stream { border-color: var(--accent); background: var(--accent-bg); }
-  
   .stream-row { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; }
   .stream-select { background: var(--bg-hover); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.7em; padding: 2px; outline: none; }
   .stream-amount { width: 80px; text-align: right; }
   .stream-hurdle-row { display: flex; align-items: center; gap: 6px; font-size: 0.65em; color: var(--text-muted); }
   .hurdle-range { flex: 1; accent-color: var(--accent); height: 12px; }
+  /* Effort bar in stream item */
+  .effort-bar-wrap { display: flex; align-items: center; gap: 6px; font-size: 0.6em; color: var(--text-muted); margin-top: 4px; }
+  .effort-bar { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .effort-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
 
-  /* Right Panel */
   .right-panel { display: flex; flex-direction: column; gap: 20px; }
-  .map-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; position: relative; }
-  .canvas-wrap { position: relative; width: 100%; aspect-ratio: 1.7; background: #ffffff; border: 1px solid var(--q-border); border-radius: 10px; overflow: hidden; }
+  .map-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; }
+  .canvas-wrap { position: relative; width: 100%; aspect-ratio: 1.7; background: #fff; border: 1px solid var(--q-border); border-radius: 10px; overflow: hidden; }
   [data-theme="dark"] .canvas-wrap { background: #0f0f14; }
   canvas { width: 100%; height: 100%; }
-  
   .map-label { position: absolute; font-size: 0.7em; font-weight: 800; opacity: 0.4; pointer-events: none; text-transform: uppercase; }
   .label-y { writing-mode: vertical-lr; left: 10px; top: 50%; transform: translateY(-50%) rotate(180deg); }
   .label-x { bottom: 10px; left: 50%; transform: translateX(-50%); }
 
-  /* Action Kit */
+  /* Kit Panel with Checklist */
   .kit-panel { background: var(--rec-bg); border: 1px solid var(--rec-border); border-radius: 12px; padding: 16px; display: none; }
   .kit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
   .kit-box { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
   .kit-box h5 { font-size: 0.7em; color: var(--text-dim); margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 3px; text-transform: uppercase; }
-  .kit-item { display: flex; align-items: flex-start; gap: 6px; font-size: 0.75em; margin-bottom: 4px; }
-  .kit-icon { color: var(--accent); }
+  .check-item { display: flex; align-items: center; gap: 8px; font-size: 0.75em; margin-bottom: 5px; padding: 3px 0; cursor: pointer; border-radius: 4px; }
+  .check-item:hover { background: var(--bg-hover); }
+  .check-box { width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+  .check-box.checked { background: var(--green); border-color: var(--green); color: #fff; }
+  .check-label { flex: 1; }
+  .check-label.done { text-decoration: line-through; color: var(--text-muted); }
+  .effort-summary { margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.03); border-radius: 6px; }
+  .effort-summary-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+  .effort-summary-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
 </style>
 </head>
 <body>
@@ -108,8 +109,8 @@
 </div>
 
 <div class="container">
-  <h1>🎯 SA Sales Execution Map v4.6</h1>
-  <p class="subtitle">Enhanced Scatter — Jitter + Proportional Sizing</p>
+  <h1>🎯 SA Sales Execution Map v5.0</h1>
+  <p class="subtitle">Effort Tracking — 도넛 게이지 + 활동 체크리스트 + 노력 시각화</p>
 
   <div class="main-layout">
     <div class="left-panel">
@@ -118,11 +119,11 @@
         <div class="config-row">
           <div class="config-item">
             <label class="config-label">Single Max (만원)</label>
-            <input type="number" class="config-input" id="cfg-single-max" value="10000" oninput="syncUI(false)">
+            <input type="number" class="config-input" id="cfg-single-max" value="100000" oninput="syncUI(false)">
           </div>
           <div class="config-item">
             <label class="config-label">Account Total Max (만원)</label>
-            <input type="number" class="config-input" id="cfg-total-max" value="30000" oninput="syncUI(false)">
+            <input type="number" class="config-input" id="cfg-total-max" value="300000" oninput="syncUI(false)">
           </div>
         </div>
       </div>
@@ -147,7 +148,7 @@
       </div>
 
       <div class="csv-import-box">
-        <p style="font-size:0.65em; color:var(--text-muted); margin-bottom:5px;">CSV Bulk Import (산업,고객사,오퍼,제품,단계,금액)</p>
+        <p style="font-size:0.65em; color:var(--text-muted); margin-bottom:5px;">CSV (산업,고객사,오퍼,제품,단계,금액)</p>
         <textarea id="csv-input" class="csv-textarea" placeholder="금융,A은행,클라우드고도화,ocp,2,50000"></textarea>
         <button class="btn-action" style="width:100%; font-size:0.7em;" onclick="importCSV()">데이터 불러오기</button>
       </div>
@@ -161,7 +162,6 @@
           <canvas id="map-canvas"></canvas>
           <div class="map-label label-y">Strategic Account Value ↑</div>
           <div class="map-label label-x">Pipeline Stage →</div>
-          
           <div style="position:absolute; top:15px; right:15px; color:#4CAF50; font-size:0.75em; font-weight:800; opacity:0.6;">🎯 PRIORITY</div>
           <div style="position:absolute; top:15px; left:50px; color:#FF9800; font-size:0.75em; font-weight:800; opacity:0.6;">🌱 NURTURE</div>
           <div style="position:absolute; bottom:40px; left:50px; color:#9E9E9E; font-size:0.75em; font-weight:800; opacity:0.6;">🔍 EXPLORE</div>
@@ -180,17 +180,17 @@
             <div id="kit-collateral"></div>
           </div>
           <div class="kit-box">
-            <h5>🤝 추천 활동 (Engagement)</h5>
+            <h5>🤝 활동 (Engagement)</h5>
             <div id="kit-engagement"></div>
           </div>
         </div>
+        <div class="effort-summary" id="effort-summary"></div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-// ===== DATA =====
 const solutions = [
   { id:'ocp', name:'OpenShift (OCP)' }, { id:'ocp-virt', name:'OCP Virt' }, { id:'rhel', name:'RHEL' },
   { id:'rhoai', name:'OpenShift AI' }, { id:'aap', name:'Ansible' }, { id:'acs', name:'ACS (Security)' },
@@ -199,304 +199,309 @@ const solutions = [
 ];
 const stages = ['Early Sales', 'Proposal / PoC', 'Pilot', 'Production'];
 const stageIcons = ['🔍', '📝', '🧪', '🚀'];
+
+// Kit items per stage (used as checklist keys)
 const kits = {
-  'Early Sales': { collateral: ['Discovery 질문지', '1-Pager', '성공사례 요약'], engagement: ['Discovery Session', 'Roadshow'] },
-  'Proposal / PoC': { collateral: ['Ref Architecture', 'PoC 시나리오', '경쟁비교표'], engagement: ['Demo', 'Navigate Workshop'] },
-  'Pilot': { collateral: ['구축 체크리스트', 'KPI 합의서', '마이그레이션 플랜'], engagement: ['Hands-on (심화)', '운영 온보딩'] },
-  'Production': { collateral: ['확산 로드맵', '표준 운영 가이드', '성과 보고서'], engagement: ['전략 리뷰', '챔피언 육성'] }
+  0: { collateral: ['Discovery 질문지', '1-Pager', '성공사례 요약'], engagement: ['Discovery Session', 'Roadshow', 'Account Day'] },
+  1: { collateral: ['Ref Architecture', 'PoC 시나리오', '경쟁비교표', '상세 제안서'], engagement: ['Live Demo', 'Navigate Workshop', 'Hands-on (기초)'] },
+  2: { collateral: ['구축 체크리스트', 'KPI 합의서', '마이그레이션 플랜', '문제해결 가이드'], engagement: ['Hands-on (심화)', '에스컬레이션 체계', '운영팀 온보딩'] },
+  3: { collateral: ['확산 로드맵', '표준 운영 가이드(SOP)', '성과 보고서', '라이선스 최적화'], engagement: ['챔피언 육성', '전략 리뷰', 'DevNation 연결'] }
 };
+
 const colors = ['#EE0000','#2196F3','#4CAF50','#FF9800','#9C27B0','#00BCD4','#FF5722','#8BC34A','#E91E63','#009688'];
 
-// ===== STATE =====
 let accounts = [];
 let selectedStreamId = null;
 let activeFilters = new Set(solutions.map(s => s.id));
 
+// Build default efforts for a stage (all unchecked)
+function buildEfforts(stage) {
+  const kit = kits[stage];
+  const efforts = {};
+  kit.collateral.forEach(k => efforts['c:'+k] = false);
+  kit.engagement.forEach(k => efforts['e:'+k] = false);
+  return efforts;
+}
+
+function getEffortScore(s) {
+  if (!s.efforts) return 0;
+  const keys = Object.keys(s.efforts);
+  if (!keys.length) return 0;
+  return keys.filter(k => s.efforts[k]).length / keys.length;
+}
+
+function effortColor(score) {
+  if (score >= 0.7) return '#4CAF50';
+  if (score >= 0.4) return '#FF9800';
+  return '#f44336';
+}
+
 function syncUI(full = true) {
   renderFilter();
   if (full) renderAccountList();
-  renderMap();
-  renderKit();
+  renderMap(); renderKit();
 }
 
-// ===== ACTIONS =====
 function addAccount() {
   const id = Date.now();
   accounts.push({ id, industry:'산업', customer:'고객사', oppties: [{ id: id+1, name:'신규 오퍼튜니티', streams:[] }] });
   syncUI(true);
 }
-function updateAccount(id, field, val) {
-  const acc = accounts.find(a => a.id === id);
-  if (acc) acc[field] = val;
-  syncUI(false);
-}
-function updateOpp(accId, oppId, val) {
-  const acc = accounts.find(a => a.id === accId);
-  const opp = acc.oppties.find(o => o.id === oppId);
-  if (opp) opp.name = val;
-  syncUI(false);
-}
-function addStream(accId, oppId) {
-  const acc = accounts.find(a => a.id === accId);
-  const opp = acc.oppties.find(o => o.id === oppId);
-  const sid = `s-${Date.now()}`;
-  opp.streams.push({ id: sid, solId:'ocp', stage:0, amount:1000, hurdle:30 });
-  selectedStreamId = sid;
-  syncUI(true);
+function updateAccount(id, field, val) { const a = accounts.find(x=>x.id===id); if(a) a[field]=val; syncUI(false); }
+function updateOpp(aId, oId, val) { const a=accounts.find(x=>x.id===aId); const o=a.oppties.find(x=>x.id===oId); if(o) o.name=val; syncUI(false); }
+function addStream(aId, oId) {
+  const a=accounts.find(x=>x.id===aId); const o=a.oppties.find(x=>x.id===oId);
+  const sid=`s-${Date.now()}`;
+  o.streams.push({ id:sid, solId:'ocp', stage:0, amount:1000, hurdle:30, efforts: buildEfforts(0) });
+  selectedStreamId=sid; syncUI(true);
 }
 function updateStream(sid, field, val) {
-  accounts.forEach(acc => acc.oppties.forEach(opp => {
-    const s = opp.streams.find(x => x.id === sid);
-    if (s) s[field] = val;
+  accounts.forEach(a=>a.oppties.forEach(o=>{
+    const s=o.streams.find(x=>x.id===sid);
+    if(s) {
+      s[field]=val;
+      // When stage changes, rebuild efforts (keep checked items that still exist)
+      if(field==='stage') {
+        const newEfforts = buildEfforts(val);
+        Object.keys(newEfforts).forEach(k => { if(s.efforts && s.efforts[k]) newEfforts[k]=true; });
+        s.efforts = newEfforts;
+      }
+    }
   }));
   syncUI(false);
 }
-function deleteStream(accId, oppId, sid) {
-  const acc = accounts.find(a => a.id === accId);
-  const opp = acc.oppties.find(o => o.id === oppId);
-  opp.streams = opp.streams.filter(x => x.id !== sid);
-  if (selectedStreamId === sid) selectedStreamId = null;
+function toggleEffort(sid, key) {
+  accounts.forEach(a=>a.oppties.forEach(o=>{
+    const s=o.streams.find(x=>x.id===sid);
+    if(s && s.efforts) s.efforts[key] = !s.efforts[key];
+  }));
+  syncUI(false);
+}
+function deleteStream(aId, oId, sid) {
+  const a=accounts.find(x=>x.id===aId); const o=a.oppties.find(x=>x.id===oId);
+  o.streams=o.streams.filter(x=>x.id!==sid);
+  if(selectedStreamId===sid) selectedStreamId=null;
   syncUI(true);
 }
-function toggleFilter() {
-  const body = document.getElementById('filter-body');
-  const icon = document.getElementById('filter-icon');
-  const isHidden = body.style.display === 'none';
-  body.style.display = isHidden ? 'block' : 'none';
-  icon.textContent = isHidden ? '▲' : '▼';
-}
-function toggleSolFilter(id) {
-  if (activeFilters.has(id)) activeFilters.delete(id);
-  else activeFilters.add(id);
-  syncUI(false);
-}
-function filterAll(val) {
-  if (val) solutions.forEach(s => activeFilters.add(s.id));
-  else activeFilters.clear();
-  syncUI(false);
-}
+function toggleFilter() { const b=document.getElementById('filter-body'); const i=document.getElementById('filter-icon'); const h=b.style.display==='none'; b.style.display=h?'block':'none'; i.textContent=h?'▲':'▼'; }
+function toggleSolFilter(id) { if(activeFilters.has(id)) activeFilters.delete(id); else activeFilters.add(id); syncUI(false); }
+function filterAll(v) { if(v) solutions.forEach(s=>activeFilters.add(s.id)); else activeFilters.clear(); syncUI(false); }
 function importCSV() {
-  const input = document.getElementById('csv-input').value;
-  if (!input) return;
-  const lines = input.trim().split('\n');
-  accounts = [];
-  lines.forEach((line, idx) => {
-    const parts = line.split(',').map(s => s.trim());
-    if (parts.length < 6) return;
-    const [ind, cus, opp, prod, stage, amt] = parts;
-    let acc = accounts.find(a => a.customer === cus);
-    if (!acc) {
-      acc = { id: Date.now()+idx, industry: ind, customer: cus, oppties: [] };
-      accounts.push(acc);
-    }
-    let op = acc.oppties.find(o => o.name === opp);
-    if (!op) {
-      op = { id: Date.now()+idx+100, name: opp, streams: [] };
-      acc.oppties.push(op);
-    }
-    op.streams.push({ id: `s-${Date.now()}-${idx}`, solId: prod, stage: parseInt(stage)||0, amount: parseInt(amt)||0, hurdle: 30 });
+  const input=document.getElementById('csv-input').value; if(!input) return;
+  accounts=[];
+  input.trim().split('\n').forEach((line,idx)=>{
+    const p=line.split(',').map(s=>s.trim()); if(p.length<6) return;
+    const [ind,cus,opp,prod,stage,amt]=p;
+    let a=accounts.find(x=>x.customer===cus);
+    if(!a){ a={id:Date.now()+idx,industry:ind,customer:cus,oppties:[]}; accounts.push(a); }
+    let o=a.oppties.find(x=>x.name===opp);
+    if(!o){ o={id:Date.now()+idx+100,name:opp,streams:[]}; a.oppties.push(o); }
+    const stg=parseInt(stage)||0;
+    o.streams.push({ id:`s-${Date.now()}-${idx}`, solId:prod, stage:stg, amount:parseInt(amt)||0, hurdle:30, efforts:buildEfforts(stg) });
   });
   syncUI(true);
 }
 
-// ===== RENDERERS =====
 function renderFilter() {
-  const grid = document.getElementById('filter-grid');
-  grid.innerHTML = solutions.map(s => `
-    <div class="sol-tag ${activeFilters.has(s.id)?'active':''}" onclick="toggleSolFilter('${s.id}')">${s.name}</div>
-  `).join('');
+  document.getElementById('filter-grid').innerHTML = solutions.map(s =>
+    `<div class="sol-tag ${activeFilters.has(s.id)?'active':''}" onclick="toggleSolFilter('${s.id}')">${s.name}</div>`
+  ).join('');
 }
 
 function renderAccountList() {
-  const list = document.getElementById('account-list');
-  list.innerHTML = accounts.map((acc, ai) => `
-    <div class="account-card" style="border-top: 3px solid ${colors[ai % colors.length]}">
+  document.getElementById('account-list').innerHTML = accounts.map((acc,ai) => {
+    return `<div class="account-card" style="border-top:3px solid ${colors[ai%colors.length]}">
       <div class="acc-header">
-        <input class="acc-input industry" value="${acc.industry}" oninput="updateAccount(${acc.id}, 'industry', this.value)" onclick="event.stopPropagation()">
-        <input class="acc-input customer" value="${acc.customer}" oninput="updateAccount(${acc.id}, 'customer', this.value)" onclick="event.stopPropagation()">
+        <input class="acc-input industry" value="${acc.industry}" oninput="updateAccount(${acc.id},'industry',this.value)" onclick="event.stopPropagation()">
+        <input class="acc-input customer" value="${acc.customer}" oninput="updateAccount(${acc.id},'customer',this.value)" onclick="event.stopPropagation()">
       </div>
-      ${acc.oppties.map(opp => `
-        <div class="oppty-box">
-          <div class="oppty-header">
-            <input class="oppty-name-input" value="${opp.name}" oninput="updateOpp(${acc.id}, ${opp.id}, this.value)" onclick="event.stopPropagation()" placeholder="오퍼튜니티 명칭">
-          </div>
-          ${opp.streams.map(s => `
-            <div class="stream-item ${selectedStreamId===s.id?'active-stream':''}" onclick="selectStream('${s.id}')">
-              <div class="stream-row">
-                <select class="stream-select" style="flex:1" onchange="updateStream('${s.id}', 'solId', this.value)" onclick="event.stopPropagation()">
-                  ${solutions.map(sol => `<option value="${sol.id}" ${s.solId===sol.id?'selected':''}>${sol.name}</option>`).join('')}
-                </select>
-                <select class="stream-select" onchange="updateStream('${s.id}', 'stage', parseInt(this.value))" onclick="event.stopPropagation()">
-                  ${stages.map((st, i) => `<option value="${i}" ${s.stage===i?'selected':''}>${stageIcons[i]}</option>`).join('')}
-                </select>
-                <input class="acc-input stream-amount" type="number" value="${s.amount}" oninput="updateStream('${s.id}', 'amount', parseInt(this.value))" onclick="event.stopPropagation()">
-                <button class="btn-del-opp" style="font-size:0.7em" onclick="event.stopPropagation(); deleteStream(${acc.id}, ${opp.id}, '${s.id}')">✕</button>
-              </div>
-              <div class="stream-hurdle-row">
-                <label>Hurdle</label>
-                <input type="range" class="hurdle-range" min="0" max="100" value="${s.hurdle}" oninput="updateStream('${s.id}', 'hurdle', parseInt(this.value))" onclick="event.stopPropagation()">
-                <span>${s.hurdle}%</span>
-              </div>
+      ${acc.oppties.map(opp => `<div class="oppty-box">
+        <input class="oppty-name-input" value="${opp.name}" oninput="updateOpp(${acc.id},${opp.id},this.value)" onclick="event.stopPropagation()">
+        ${opp.streams.map(s => {
+          const score = getEffortScore(s);
+          const eColor = effortColor(score);
+          return `<div class="stream-item ${selectedStreamId===s.id?'active-stream':''}" onclick="selectStream('${s.id}')">
+            <div class="stream-row">
+              <select class="stream-select" style="flex:1" onchange="updateStream('${s.id}','solId',this.value)" onclick="event.stopPropagation()">
+                ${solutions.map(sol=>`<option value="${sol.id}" ${s.solId===sol.id?'selected':''}>${sol.name}</option>`).join('')}
+              </select>
+              <select class="stream-select" onchange="updateStream('${s.id}','stage',parseInt(this.value))" onclick="event.stopPropagation()">
+                ${stages.map((st,i)=>`<option value="${i}" ${s.stage===i?'selected':''}>${stageIcons[i]}</option>`).join('')}
+              </select>
+              <input class="acc-input stream-amount" type="number" value="${s.amount}" oninput="updateStream('${s.id}','amount',parseInt(this.value))" onclick="event.stopPropagation()">
+              <button style="font-size:0.7em;border:none;background:none;cursor:pointer;color:var(--text-muted)" onclick="event.stopPropagation();deleteStream(${acc.id},${opp.id},'${s.id}')">✕</button>
             </div>
-          `).join('')}
-          <button class="btn-action" style="font-size:0.65em; padding:2px 6px" onclick="addStream(${acc.id}, ${opp.id})">＋ 스트림</button>
-        </div>
-      `).join('')}
-    </div>
-  `).join('');
+            <div class="effort-bar-wrap">
+              <span>Effort ${Math.round(score*100)}%</span>
+              <div class="effort-bar"><div class="effort-bar-fill" style="width:${score*100}%;background:${eColor}"></div></div>
+            </div>
+          </div>`;
+        }).join('')}
+        <button class="btn-action" style="font-size:0.65em;padding:2px 6px" onclick="addStream(${acc.id},${opp.id})">＋ 스트림</button>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
 }
 
-function selectStream(id) { selectedStreamId = id; syncUI(true); }
+function selectStream(id) { selectedStreamId=id; syncUI(true); }
 
 function renderMap() {
-  const canvas = document.getElementById('map-canvas');
-  const wrap = canvas.parentElement;
-  canvas.width = wrap.clientWidth * 2; canvas.height = wrap.clientHeight * 2;
-  const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
-  const W = wrap.clientWidth, H = wrap.clientHeight, pad = 60;
-  ctx.clearRect(0, 0, W, H);
-  const cs = getComputedStyle(document.documentElement);
+  const canvas=document.getElementById('map-canvas'); const wrap=canvas.parentElement;
+  canvas.width=wrap.clientWidth*2; canvas.height=wrap.clientHeight*2;
+  const ctx=canvas.getContext('2d'); ctx.scale(2,2);
+  const W=wrap.clientWidth, H=wrap.clientHeight, pad=60;
+  ctx.clearRect(0,0,W,H);
+  const cs=getComputedStyle(document.documentElement);
+  const sMax=parseInt(document.getElementById('cfg-single-max').value)||100000;
+  const tMax=parseInt(document.getElementById('cfg-total-max').value)||300000;
+  const colW=(W-2*pad)/4;
 
-  const sMax = parseInt(document.getElementById('cfg-single-max').value) || 10000;
-  const tMax = parseInt(document.getElementById('cfg-total-max').value) || 30000;
-  const colW = (W - 2*pad) / 4; // 4 columns
-
-  // Draw column backgrounds (alternating)
-  for (let i = 0; i < 4; i++) {
-    ctx.fillStyle = i % 2 === 0 ? 'rgba(0,0,0,0.015)' : 'rgba(0,0,0,0.005)';
-    ctx.fillRect(pad + i*colW, pad, colW, H - 2*pad);
+  // Column backgrounds
+  for(let i=0;i<4;i++){
+    ctx.fillStyle=i%2===0?'rgba(0,0,0,0.015)':'rgba(0,0,0,0.005)';
+    ctx.fillRect(pad+i*colW,pad,colW,H-2*pad);
   }
-
-  // Draw mid lines
-  ctx.strokeStyle = cs.getPropertyValue('--q-border').trim();
-  ctx.lineWidth = 1;
-  // Horizontal mid
-  ctx.beginPath(); ctx.moveTo(pad, H/2); ctx.lineTo(W-pad, H/2); ctx.stroke();
-  // Vertical column separators
+  // Grid
+  ctx.strokeStyle=cs.getPropertyValue('--q-border').trim(); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad,H/2); ctx.lineTo(W-pad,H/2); ctx.stroke();
   ctx.setLineDash([3,3]);
-  for (let i = 1; i < 4; i++) {
-    ctx.beginPath(); ctx.moveTo(pad + i*colW, pad); ctx.lineTo(pad + i*colW, H-pad); ctx.stroke();
-  }
+  for(let i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(pad+i*colW,pad); ctx.lineTo(pad+i*colW,H-pad); ctx.stroke(); }
   ctx.setLineDash([]);
+  // Stage labels
+  ctx.fillStyle=cs.getPropertyValue('--text-muted').trim(); ctx.font='bold 10px Segoe UI'; ctx.textAlign='center';
+  stages.forEach((st,i)=>ctx.fillText(`${stageIcons[i]} ${st}`,pad+i*colW+colW/2,H-pad+15));
 
-  // Stage labels at bottom
-  ctx.fillStyle = cs.getPropertyValue('--text-muted').trim();
-  ctx.font = 'bold 10px Segoe UI';
-  ctx.textAlign = 'center';
-  stages.forEach((st, i) => {
-    ctx.fillText(`${stageIcons[i]} ${st}`, pad + i*colW + colW/2, H - pad + 15);
+  // Collect & jitter
+  const slots=[[],[],[],[]];
+  accounts.forEach((acc,ai)=>{
+    const accTotal=acc.oppties.reduce((s,o)=>s+o.streams.reduce((s2,st)=>s2+st.amount,0),0);
+    acc.oppties.forEach(opp=>opp.streams.forEach(s=>{
+      if(!activeFilters.has(s.solId)) return;
+      slots[s.stage].push({s,acc,ai,accTotal});
+    }));
   });
 
-  // Collect all visible streams for jitter calculation
-  const stageSlots = [[], [], [], []];
-  accounts.forEach((acc, ai) => {
-    const accTotal = acc.oppties.reduce((sum, o) => sum + o.streams.reduce((s, st) => s + st.amount, 0), 0);
-    acc.oppties.forEach(opp => {
-      opp.streams.forEach(s => {
-        if (!activeFilters.has(s.solId)) return;
-        stageSlots[s.stage].push({ s, acc, ai, accTotal });
-      });
-    });
-  });
+  slots.forEach((sl,si)=>{
+    const cx=pad+si*colW+colW/2;
+    const jR=colW*0.35;
+    sl.forEach((item,idx)=>{
+      const{s,acc,ai,accTotal}=item;
+      const color=colors[ai%colors.length];
+      const jSeed=(idx-(sl.length-1)/2);
+      const jStep=sl.length>1?jR/(sl.length-1):0;
+      const xPos=cx+jSeed*jStep;
+      const yVal=(Math.min(1,s.amount/sMax)*0.6)+(Math.min(1,accTotal/tMax)*0.4);
+      const yPos=(H-pad)-yVal*(H-2*pad);
+      const baseR=5+Math.min(7,(s.amount/sMax)*7);
+      const isSel=s.id===selectedStreamId;
+      const r=isSel?baseR+3:baseR;
+      const score=getEffortScore(s);
+      const eColor=effortColor(score);
 
-  // Draw dots with jitter within columns
-  stageSlots.forEach((slots, stageIdx) => {
-    const colCenter = pad + stageIdx * colW + colW / 2;
-    const jitterRange = colW * 0.35; // scatter within 70% of column width
+      // Donut background (gray ring)
+      ctx.beginPath(); ctx.arc(xPos,yPos,r+3,0,Math.PI*2);
+      ctx.strokeStyle='rgba(0,0,0,0.08)'; ctx.lineWidth=4; ctx.stroke();
 
-    slots.forEach((item, slotIdx) => {
-      const { s, acc, ai, accTotal } = item;
-      const color = colors[ai % colors.length];
+      // Donut fill (effort arc)
+      if(score>0){
+        ctx.beginPath();
+        ctx.arc(xPos,yPos,r+3,-Math.PI/2,-Math.PI/2+score*Math.PI*2);
+        ctx.strokeStyle=eColor; ctx.lineWidth=4; ctx.stroke();
+      }
 
-      // X: column center + deterministic jitter based on slot index
-      const jitterSeed = (slotIdx - (slots.length - 1) / 2);
-      const jitterStep = slots.length > 1 ? jitterRange / (slots.length - 1) : 0;
-      const xPos = colCenter + jitterSeed * jitterStep;
+      // Inner dot
+      ctx.globalAlpha=isSel?1:0.85;
+      ctx.fillStyle=color;
+      if(isSel){ctx.shadowBlur=14;ctx.shadowColor=color;}
+      ctx.beginPath(); ctx.arc(xPos,yPos,r,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
 
-      // Y: strategic value
-      const yVal = (Math.min(1, s.amount / sMax)*0.6) + (Math.min(1, accTotal / tMax)*0.4);
-      const yPos = (H - pad) - yVal * (H - 2*pad);
-
-      // Dot size proportional to amount
-      const baseR = 4 + Math.min(8, (s.amount / sMax) * 8);
-      const isSelected = s.id === selectedStreamId;
-      const r = isSelected ? baseR + 3 : baseR;
-
-      // Draw dot
-      ctx.globalAlpha = isSelected ? 1 : 0.85;
-      ctx.fillStyle = color;
-      if (isSelected) { ctx.shadowBlur = 14; ctx.shadowColor = color; }
-      ctx.beginPath(); ctx.arc(xPos, yPos, r, 0, Math.PI*2); ctx.fill();
-      ctx.shadowBlur = 0;
-
-      // Border ring
-      ctx.strokeStyle = isSelected ? '#000' : 'rgba(0,0,0,0.15)';
-      ctx.lineWidth = isSelected ? 2 : 1;
-      ctx.beginPath(); ctx.arc(xPos, yPos, r, 0, Math.PI*2); ctx.stroke();
-      ctx.globalAlpha = 1;
+      // Border
+      ctx.strokeStyle=isSel?'#000':'rgba(0,0,0,0.1)'; ctx.lineWidth=isSel?2:1;
+      ctx.beginPath(); ctx.arc(xPos,yPos,r,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha=1;
 
       // Label
-      ctx.fillStyle = isSelected ? cs.getPropertyValue('--text-heading') : cs.getPropertyValue('--text-dim');
-      ctx.font = isSelected ? 'bold 10px Segoe UI' : '9px Segoe UI';
-      ctx.textAlign = 'center';
-      const label = `${acc.customer}:${solutions.find(x=>x.id===s.solId).name}`;
-      ctx.fillText(label, xPos, yPos - r - 4);
+      ctx.fillStyle=isSel?cs.getPropertyValue('--text-heading'):cs.getPropertyValue('--text-dim');
+      ctx.font=isSel?'bold 10px Segoe UI':'9px Segoe UI'; ctx.textAlign='center';
+      ctx.fillText(`${acc.customer}:${solutions.find(x=>x.id===s.solId).name}`,xPos,yPos-r-8);
 
-      // Store position for click detection
-      s._rx = xPos; s._ry = yPos; s._rr = r;
+      s._rx=xPos; s._ry=yPos; s._rr=r;
     });
   });
 }
 
 function renderKit() {
-  const panel = document.getElementById('kit-panel');
-  if (!selectedStreamId) { panel.style.display = 'none'; return; }
-  let stream = null, acc = null, opp = null;
-  accounts.forEach(a => a.oppties.forEach(o => {
-    const s = o.streams.find(x => x.id === selectedStreamId);
-    if (s) { stream = s; acc = a; opp = o; }
-  }));
-  if (!stream) return;
-  panel.style.display = 'block';
-  const sol = solutions.find(x => x.id === stream.solId);
-  const stage = stages[stream.stage];
-  const kit = kits[stage];
-  document.getElementById('kit-title').innerHTML = `🏢 [${acc.industry}] <b>${acc.customer}</b> — ${sol.name}`;
-  document.getElementById('kit-meta').innerHTML = `오퍼튜니티: ${opp.name} | 단계: <b>${stage}</b> | 금액: <b>${stream.amount.toLocaleString()}만원</b>`;
-  document.getElementById('kit-collateral').innerHTML = kit.collateral.map(i => `<div class="kit-item"><span class="kit-icon">📄</span> ${i}</div>`).join('');
-  document.getElementById('kit-engagement').innerHTML = kit.engagement.map(i => `<div class="kit-item"><span class="kit-icon">🔥</span> ${i}</div>`).join('');
+  const panel=document.getElementById('kit-panel');
+  if(!selectedStreamId){panel.style.display='none';return;}
+  let stream=null,acc=null,opp=null;
+  accounts.forEach(a=>a.oppties.forEach(o=>{const s=o.streams.find(x=>x.id===selectedStreamId);if(s){stream=s;acc=a;opp=o;}}));
+  if(!stream) return;
+  panel.style.display='block';
+  const sol=solutions.find(x=>x.id===stream.solId);
+  const kit=kits[stream.stage];
+  const score=getEffortScore(stream);
+  const eColor=effortColor(score);
+
+  document.getElementById('kit-title').innerHTML=`🏢 [${acc.industry}] <b>${acc.customer}</b> — ${sol.name}`;
+  document.getElementById('kit-meta').innerHTML=`오퍼튜니티: ${opp.name} | 단계: <b>${stages[stream.stage]}</b> | 금액: <b>${stream.amount.toLocaleString()}만원</b>`;
+
+  // Checklist collateral
+  document.getElementById('kit-collateral').innerHTML=kit.collateral.map(item=>{
+    const key='c:'+item; const done=stream.efforts&&stream.efforts[key];
+    return `<div class="check-item" onclick="event.stopPropagation();toggleEffort('${stream.id}','${key}')">
+      <div class="check-box ${done?'checked':''}">${done?'✓':''}</div>
+      <span class="check-label ${done?'done':''}">${item}</span>
+    </div>`;
+  }).join('');
+
+  // Checklist engagement
+  document.getElementById('kit-engagement').innerHTML=kit.engagement.map(item=>{
+    const key='e:'+item; const done=stream.efforts&&stream.efforts[key];
+    return `<div class="check-item" onclick="event.stopPropagation();toggleEffort('${stream.id}','${key}')">
+      <div class="check-box ${done?'checked':''}">${done?'✓':''}</div>
+      <span class="check-label ${done?'done':''}">${item}</span>
+    </div>`;
+  }).join('');
+
+  // Effort summary
+  const total=Object.keys(stream.efforts||{}).length;
+  const done=Object.values(stream.efforts||{}).filter(Boolean).length;
+  document.getElementById('effort-summary').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.8em;">
+      <b>Effort Score</b>
+      <span style="color:${eColor};font-weight:800;font-size:1.1em;">${done}/${total} (${Math.round(score*100)}%)</span>
+    </div>
+    <div class="effort-summary-bar"><div class="effort-summary-fill" style="width:${score*100}%;background:${eColor}"></div></div>
+    <p style="font-size:0.7em;color:var(--text-muted);margin-top:6px;">
+      ${score>=0.7?'✅ 다음 단계 승격 준비 완료':score>=0.4?'⚠️ 핵심 활동이 남아있습니다':'🚨 초기 단계 — 투입 가속 필요'}
+    </p>
+  `;
 }
 
 function setTheme(t) {
-  if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  if(t==='dark') document.documentElement.setAttribute('data-theme','dark');
   else document.documentElement.removeAttribute('data-theme');
-  document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
-  setTimeout(() => syncUI(true), 50);
+  document.querySelectorAll('.theme-btn').forEach(b=>b.classList.toggle('active',b.dataset.t===t));
+  setTimeout(()=>syncUI(true),50);
 }
 
-document.getElementById('map-canvas').addEventListener('click', (e) => {
-  const rect = e.target.getBoundingClientRect();
-  const x = (e.clientX - rect.left);
-  const y = (e.clientY - rect.top);
-  let closest = null, minDiff = 25;
-  accounts.forEach(acc => {
-    acc.oppties.forEach(opp => {
-      opp.streams.forEach(s => {
-        if (!activeFilters.has(s.solId) || s._rx == null) return;
-        const diff = Math.sqrt((s._rx - x)**2 + (s._ry - y)**2);
-        if (diff < minDiff) { minDiff = diff; closest = s.id; }
-      });
-    });
-  });
-  if (closest) { selectedStreamId = closest; syncUI(true); }
+document.getElementById('map-canvas').addEventListener('click',(e)=>{
+  const rect=e.target.getBoundingClientRect();
+  const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  let closest=null, minD=25;
+  accounts.forEach(a=>a.oppties.forEach(o=>o.streams.forEach(s=>{
+    if(!activeFilters.has(s.solId)||s._rx==null) return;
+    const d=Math.sqrt((s._rx-x)**2+(s._ry-y)**2);
+    if(d<minD){minD=d;closest=s.id;}
+  })));
+  if(closest){selectedStreamId=closest;syncUI(true);}
 });
 
 // Init
-addAccount();
-accounts[0].industry = '금융'; accounts[0].customer = 'A은행';
-addStream(accounts[0].id, accounts[0].oppties[0].id);
+addAccount(); accounts[0].industry='금융'; accounts[0].customer='A은행';
+addStream(accounts[0].id,accounts[0].oppties[0].id);
 syncUI(true);
 </script>
 </body>
 </html>
-/html>
