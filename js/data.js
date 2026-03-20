@@ -11,24 +11,36 @@ const stages = ['Early Sales', 'Proposal / PoC', 'Pilot', 'Production'];
 const stageIcons = ['🔍', '📝', '🧪', '🚀'];
 
 // Editable kit items per pipeline stage (Fallback defaults)
-let kits = {
-  0: {
-    collateral: ['Discovery 질문지', '1-Pager', '성공사례 요약'],
-    engagement: ['Discovery Session', 'Roadshow', 'Account Day']
-  },
-  1: {
-    collateral: ['Ref Architecture', 'PoC 시나리오', '경쟁비교표', '상세 제안서'],
-    engagement: ['Live Demo', 'Navigate Workshop', 'Hands-on (기초)']
-  },
-  2: {
-    collateral: ['구축 체크리스트', 'KPI 합의서', '마이그레이션 플랜', '문제해결 가이드'],
-    engagement: ['Hands-on (심화)', '에스컬레이션 체계', '운영팀 온보딩']
-  },
-  3: {
-    collateral: ['확산 로드맵', '표준 운영 가이드(SOP)', '성과 보고서', '라이선스 최적화'],
-    engagement: ['챔피언 육성', '전략 리뷰', 'DevNation 연결']
-  }
-};
+// Editable kit items per pipeline stage (Fallback defaults)
+let kits = [
+  { solId: '*', stage: 0, cat: 'collateral', name: 'Discovery 질문지' },
+  { solId: '*', stage: 0, cat: 'collateral', name: '1-Pager' },
+  { solId: '*', stage: 0, cat: 'collateral', name: '성공사례 요약' },
+  { solId: '*', stage: 0, cat: 'engagement', name: 'Discovery Session' },
+  { solId: '*', stage: 0, cat: 'engagement', name: 'Roadshow' },
+  { solId: '*', stage: 0, cat: 'engagement', name: 'Account Day' },
+  { solId: '*', stage: 1, cat: 'collateral', name: 'Ref Architecture' },
+  { solId: '*', stage: 1, cat: 'collateral', name: 'PoC 시나리오' },
+  { solId: '*', stage: 1, cat: 'collateral', name: '경쟁비교표' },
+  { solId: '*', stage: 1, cat: 'collateral', name: '상세 제안서' },
+  { solId: '*', stage: 1, cat: 'engagement', name: 'Live Demo' },
+  { solId: '*', stage: 1, cat: 'engagement', name: 'Navigate Workshop' },
+  { solId: '*', stage: 1, cat: 'engagement', name: 'Hands-on (기초)' },
+  { solId: '*', stage: 2, cat: 'collateral', name: '구축 체크리스트' },
+  { solId: '*', stage: 2, cat: 'collateral', name: 'KPI 합의서' },
+  { solId: '*', stage: 2, cat: 'collateral', name: '마이그레이션 플랜' },
+  { solId: '*', stage: 2, cat: 'collateral', name: '문제해결 가이드' },
+  { solId: '*', stage: 2, cat: 'engagement', name: 'Hands-on (심화)' },
+  { solId: '*', stage: 2, cat: 'engagement', name: '에스컬레이션 체계' },
+  { solId: '*', stage: 2, cat: 'engagement', name: '운영팀 온보딩' },
+  { solId: '*', stage: 3, cat: 'collateral', name: '확산 로드맵' },
+  { solId: '*', stage: 3, cat: 'collateral', name: '표준 운영 가이드(SOP)' },
+  { solId: '*', stage: 3, cat: 'collateral', name: '성과 보고서' },
+  { solId: '*', stage: 3, cat: 'collateral', name: '라이선스 최적화' },
+  { solId: '*', stage: 3, cat: 'engagement', name: '챔피언 육성' },
+  { solId: '*', stage: 3, cat: 'engagement', name: '전략 리뷰' },
+  { solId: '*', stage: 3, cat: 'engagement', name: 'DevNation 연결' }
+];
 
 const colors = ['#EE0000', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#00BCD4', '#FF5722', '#8BC34A', '#E91E63', '#009688'];
 

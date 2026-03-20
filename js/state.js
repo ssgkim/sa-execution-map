@@ -10,9 +10,22 @@ let kitViewStage = null; // null = follow stream.stage
 let timelineEditMode = false;
 let timelineAccordionState = { 0: true, 1: true, 2: true, 3: true };
 
-// Build default effort checklist for a given stage
-function buildEfforts(stage) {
-  const kit = kits[stage];
+// Helper: get merged kit { collateral:[], engagement:[] } for a given solId + stage
+// Rules: items with solId === '*' (wildcard) + items matching the exact solId
+function getKitForStream(solId, stage) {
+  const c = [], e = [];
+  kits.forEach(k => {
+    if (k.stage === stage && (k.solId === '*' || k.solId === solId)) {
+      if (k.cat === 'engagement') e.push(k.name);
+      else c.push(k.name);
+    }
+  });
+  return { collateral: c, engagement: e };
+}
+
+// Build default effort checklist for a given stage (uses wildcard * only)
+function buildEfforts(stage, solId) {
+  const kit = getKitForStream(solId || '*', stage);
   const efforts = {};
   kit.collateral.forEach(k => efforts['c:' + k] = false);
   kit.engagement.forEach(k => efforts['e:' + k] = false);
@@ -466,7 +479,8 @@ function transformCloudToTree(flatData, timelineData = []) {
           const targetStage = parseInt(ev.stage) || 0;
 
           let cat = 'engagement';
-          if (kits[targetStage] && kits[targetStage].collateral.includes(name)) {
+          const kitForCat = getKitForStream(s.solId, targetStage);
+          if (kitForCat.collateral.includes(name)) {
             cat = 'collateral';
           }
 

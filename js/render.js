@@ -32,7 +32,7 @@ function renderKitMgr() {
     `<div class="kit-stage-btn ${kitMgrStage === i ? 'active' : ''}" onclick="selectKitStage(${i})">${stageIcons[i]} ${st}</div>`
   ).join('');
 
-  const kit = kits[kitMgrStage];
+  const kit = getKitForStream('*', kitMgrStage);
   document.getElementById('kit-mgr-content').innerHTML = `
     <div class="kit-cat-title">📦 세일즈 자료 (Collateral)</div>
     ${kit.collateral.map((item, idx) => `
@@ -340,7 +340,7 @@ function renderKit() {
     cCont.style.display = 'block';
 
     const vStage = kitViewStage !== null ? kitViewStage : stream.stage;
-    const kit = kits[vStage];
+    const kit = getKitForStream(stream.solId, vStage);
 
     let subTabsHtml = `<div class="kit-sub-tabs">` + stages.map((st, i) => `
       <div class="kit-sub-tab ${vStage === i ? 'active' : ''}" onclick="setKitViewStage(${i})">
@@ -394,17 +394,15 @@ function renderKit() {
     stream.timeline.forEach(ev => grouped[ev.stage].push(ev));
 
     const sStage = stream.stage;
-    const stageKits = kits[sStage];
+    const stageKits = getKitForStream(stream.solId, sStage);
     const existingNames = stream.timeline.filter(ev => ev.stage === sStage).map(ev => ev.name);
 
     const recommended = [];
-    if (stageKits) {
-      ['collateral', 'engagement'].forEach(cat => {
-        stageKits[cat].forEach(item => {
-          if (!existingNames.includes(item)) recommended.push({ cat, name: item });
-        });
+    ['collateral', 'engagement'].forEach(cat => {
+      stageKits[cat].forEach(item => {
+        if (!existingNames.includes(item)) recommended.push({ cat, name: item });
       });
-    }
+    });
 
     let recHtml = '';
     if (recommended.length > 0) {
