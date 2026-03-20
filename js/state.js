@@ -115,14 +115,13 @@ function toggleEffort(sid, key, vStage) {
 
           // Cloud Sync (v7.0)
           postTimelineToCloud({
-            accountId: sid, // stream id as account linkage
-            date: newEvent.date,
-            type: 'event',
-            stage: newEvent.stage,
-            content: `[${cat}] ${newEvent.name}`,
             customer: a.customer,
             opportunity: o.name,
-            solId: s.solId
+            solId: s.solId,
+            stage: newEvent.stage,
+            date: newEvent.date,
+            name: newEvent.name,
+            memo: '체크리스트 완료'
           });
         }
       }
@@ -149,14 +148,13 @@ function addTimelineEvent(sid, cat, name, vStage) {
 
       // Cloud Sync (v7.0)
       postTimelineToCloud({
-        accountId: sid,
-        date: newEvent.date,
-        type: 'memo',
-        stage: newEvent.stage,
-        content: newEvent.name,
         customer: a.customer,
         opportunity: o.name,
-        solId: s.solId
+        solId: s.solId,
+        stage: newEvent.stage,
+        date: newEvent.date,
+        name: newEvent.name,
+        memo: newEvent.memo || ''
       });
 
       const key = (cat === 'collateral' ? 'c:' : 'e:') + name;
@@ -397,49 +395,50 @@ function transformCloudToTree(flatData, timelineData = []) {
   });
 
   timelineData.forEach(ev => {
-    tree.forEach(a => a.oppties.forEach(o => o.streams.forEach(s => {
-      if (s.id === ev.accountId) {
-        let cat = 'engagement';
-        let name = ev.content || '';
-        let memo = '';
+    // ev: { customer, opportunity, solId, stage, date, name, memo }
+    tree.forEach(a => {
+      if (a.customer !== ev.customer) return;
+      a.oppties.forEach(o => {
+        if (o.name !== ev.opportunity) return;
+        o.streams.forEach(s => {
+          if (s.solId !== ev.solId) return;
 
-        if (ev.type === 'event') {
-          const match = name.match(/^\[(.*?)\]\s*(.*)$/);
-          if (match) {
-            cat = match[1];
-            name = match[2];
-          }
-          memo = '체크리스트 완료';
-        }
-
-        let dateStr = ev.date;
-        if (dateStr && String(dateStr).includes('T')) {
-          dateStr = String(dateStr).split('T')[0];
-        }
-
-        const evId = ev.id || Date.now() + Math.random();
-        const exist = s.timeline.find(x => x.id === evId);
-
-        if (!exist) {
+          let name = ev.name || '';
+          let memo = ev.memo || '';
           const targetStage = parseInt(ev.stage) || 0;
-          s.timeline.push({
-            id: evId,
-            date: dateStr,
-            stage: targetStage,
-            cat: cat,
-            name: name,
-            memo: memo
-          });
 
-          if (s.stageEfforts && s.stageEfforts[targetStage]) {
-            const actKey = (cat === 'collateral' ? 'c:' : 'e:') + name;
-            if (actKey in s.stageEfforts[targetStage]) {
-              s.stageEfforts[targetStage][actKey] = true;
+          let cat = 'engagement';
+          if (kits[targetStage] && kits[targetStage].collateral.includes(name)) {
+            cat = 'collateral';
+          }
+
+          let dateStr = ev.date;
+          if (dateStr && String(dateStr).includes('T')) {
+            dateStr = String(dateStr).split('T')[0];
+          }
+
+          const exist = s.timeline.find(x => x.date === dateStr && x.stage === targetStage && x.name === name);
+
+          if (!exist) {
+            s.timeline.push({
+              id: Date.now() + Math.random(),
+              date: dateStr,
+              stage: targetStage,
+              cat: cat,
+              name: name,
+              memo: memo
+            });
+
+            if (s.stageEfforts && s.stageEfforts[targetStage]) {
+              const actKey = (cat === 'collateral' ? 'c:' : 'e:') + name;
+              if (actKey in s.stageEfforts[targetStage]) {
+                s.stageEfforts[targetStage][actKey] = true;
+              }
             }
           }
-        }
-      }
-    })));
+        });
+      });
+    });
   });
 
   return tree;
