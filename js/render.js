@@ -174,55 +174,81 @@ function renderSwimLane() {
     if (o.streams.find(s => s.id === selectedStreamId)) selectedAcc = a;
   }));
 
-  if (!selectedAcc || !selectedAcc.oppties.some(o => o.streams.some(s => s.timeline && s.timeline.length))) {
+  if (!selectedAcc) {
     container.style.display = 'none'; return;
   }
+  
+  const allEvents = [];
+  selectedAcc.oppties.forEach(o => o.streams.forEach(s => {
+    if (s.timeline) s.timeline.forEach(ev => allEvents.push({...ev, solId: s.solId}));
+  }));
+
+  if (allEvents.length === 0) {
+    container.style.display = 'none'; return;
+  }
+  
   container.style.display = 'block';
   document.getElementById('swimlane-title').innerText = `🏊 ${selectedAcc.customer} — Activity Swim Lane`;
 
   const wrap = canvas.parentElement;
-  canvas.width = wrap.clientWidth * 2; canvas.height = 180 * 2;
+  canvas.width = wrap.clientWidth * 2; 
+  const streamsWithEvents = selectedAcc.oppties.reduce((acc, o) => {
+    o.streams.forEach(s => { if(s.timeline && s.timeline.length) acc.push(s); });
+    return acc;
+  }, []);
+  
+  canvas.height = Math.max(120, streamsWithEvents.length * 40 + 60) * 2;
   const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
-  const W = wrap.clientWidth, H = 180, padX = 60, padY = 30;
+  const W = wrap.clientWidth, H = canvas.height/2, padX = 80, padY = 40;
   ctx.clearRect(0,0,W,H);
 
-  // Collect all events for this account
-  const streamsWithEvents = [];
   let minDate = new Date(), maxDate = new Date(0);
-  selectedAcc.oppties.forEach(o => o.streams.forEach(s => {
-    if (s.timeline && s.timeline.length) {
-      streamsWithEvents.push(s);
-      s.timeline.forEach(ev => {
-        const d = new Date(ev.date);
-        if (d < minDate) minDate = d;
-        if (d > maxDate) maxDate = d;
-      });
-    }
-  }));
+  allEvents.forEach(ev => {
+    const d = new Date(ev.date);
+    if (d < minDate) minDate = d;
+    if (d > maxDate) maxDate = d;
+  });
 
   if (maxDate < minDate) maxDate = new Date();
-  // Buffer dates
-  minDate.setDate(minDate.getDate() - 7);
-  maxDate.setDate(maxDate.getDate() + 7);
+  minDate.setDate(minDate.getDate() - 5);
+  maxDate.setDate(maxDate.getDate() + 5);
   const timeSpan = maxDate - minDate;
 
+  // Draw Time Axis
+  ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padX, H - 20); ctx.lineTo(W - 20, H - 20); ctx.stroke();
+  
   // Draw lanes
-  const laneH = (H - 2 * padY) / streamsWithEvents.length;
+  const laneH = (H - padY - 30) / streamsWithEvents.length;
   streamsWithEvents.forEach((s, i) => {
-    const y = padY + i * laneH + laneH / 2;
-    ctx.strokeStyle = 'rgba(0,0,0,0.05)'; ctx.setLineDash([5,5]);
+    const y = padY + i * laneH;
+    ctx.fillStyle = 'rgba(0,0,0,0.02)';
+    ctx.fillRect(padX, y - laneH/2, W - padX - 20, laneH);
+    ctx.strokeStyle = 'rgba(0,0,0,0.05)';
     ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(W - 20, y); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#888'; ctx.font = '10px Segoe UI'; ctx.textAlign = 'right';
+    
+    ctx.fillStyle = '#666'; ctx.font = 'bold 10px Segoe UI'; ctx.textAlign = 'right';
     ctx.fillText(solutions.find(x=>x.id===s.solId).name, padX - 10, y + 3);
 
-    // Draw events
-    s.timeline.forEach(ev => {
-      const x = padX + ((new Date(ev.date) - minDate) / timeSpan) * (W - padX - 40);
-      ctx.fillStyle = ['#9e9e9e', '#2196f3', '#ff9800', '#4caf50'][ev.stage];
-      ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
-    });
+    // Draw events on this lane
+    if (s.timeline) {
+      s.timeline.forEach(ev => {
+        const x = padX + ((new Date(ev.date) - minDate) / timeSpan) * (W - padX - 40);
+        const color = ['#9e9e9e', '#2196f3', '#ff9800', '#4caf50'][ev.stage];
+        
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+        
+        // Event Label (Vertical)
+        ctx.save();
+        ctx.translate(x, y - 8);
+        ctx.rotate(-Math.PI/4);
+        ctx.fillStyle = '#444'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
+        ctx.fillText(ev.name, 0, 0);
+        ctx.restore();
+      });
+    }
   });
 }
 
@@ -260,12 +286,13 @@ function renderKit() {
 
     const renderItems = (items, cat) => items.map(item => {
       const key = (cat==='c'?'c:':'e:') + item;
-      const done = stream.stageEfforts ? !!stream.stageEfforts[stream.stage][key] : !!stream.efforts[key];
-      const count = stream.timeline ? stream.timeline.filter(ev => ev.name === item).length : 0;
+      const stageKey = stream.stage;
+      const done = stream.stageEfforts ? !!stream.stageEfforts[stageKey][key] : false;
+      const count = stream.timeline ? stream.timeline.filter(ev => ev.name === item && ev.stage === stageKey).length : 0;
       return `<div class="check-item" onclick="event.stopPropagation();toggleEffort('${stream.id}','${key}')">
         <div class="check-box ${done?'checked':''}">${done?'✓':''}</div>
         <span class="check-label ${done?'done':''}">${item}</span>
-        ${count > 0 ? `<span style="font-size:0.85em;color:var(--accent);font-weight:700;margin-left:5px;">×${count}</span>` : ''}
+        ${count > 0 ? `<span class="badge-count">×${count}</span>` : ''}
         <button class="add-event-btn" onclick="event.stopPropagation();addTimelineEvent('${stream.id}','${cat==='c'?'collateral':'engagement'}','${item}')">＋</button>
       </div>`;
     }).join('');
@@ -289,13 +316,22 @@ function renderKit() {
     if (!stream.timeline || !stream.timeline.length) {
       document.getElementById('timeline-content').innerHTML = '<p style="padding:20px;text-align:center;color:#888;font-size:0.8em;">기록된 활동이 없습니다. 체크리스트를 완료하거나 [＋] 버튼을 누르세요.</p>';
     } else {
+      // 날짜별 내림차순 정렬
+      const sortedEvents = [...stream.timeline].sort((a, b) => new Date(b.date) - new Date(a.date));
+      
       document.getElementById('timeline-content').innerHTML = `
         <div class="timeline-list">
-          ${stream.timeline.slice().reverse().map(ev => `
-            <div class="timeline-item">
-              <div class="tl-date">${ev.date.substring(5)}</div>
-              <div class="tl-name"><b>${ev.name}</b></div>
-              <div class="tl-memo">${ev.memo || ''}</div>
+          ${sortedEvents.map(ev => `
+            <div class="timeline-item stage-${ev.stage}">
+              <div class="tl-stage-badge">${stageIcons[ev.stage]} ${stages[ev.stage]}</div>
+              <div class="tl-content">
+                <div class="tl-header">
+                  <span class="tl-date">${ev.date}</span>
+                  <span class="tl-name">${ev.name}</span>
+                  <button class="tl-del" onclick="event.stopPropagation();deleteTimelineEvent('${stream.id}', ${ev.id})">✕</button>
+                </div>
+                <div class="tl-memo">${ev.memo || '메모 없음'}</div>
+              </div>
             </div>
           `).join('')}
         </div>

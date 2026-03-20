@@ -95,14 +95,20 @@ function toggleEffort(sid, key) {
         if (!s.timeline) s.timeline = [];
         const name = key.substring(2);
         const cat = key.startsWith('c:') ? 'collateral' : 'engagement';
-        s.timeline.push({
-          id: Date.now(),
-          date: new Date().toISOString().split('T')[0],
-          stage: s.stage,
-          cat: cat,
-          name: name,
-          memo: '체크리스트 완료'
-        });
+        const date = new Date().toISOString().split('T')[0];
+        
+        // 중복 방지: 동일 날짜, 동일 단계, 동일 활동명이 이미 존재하면 기록하지 않음
+        const exists = s.timeline.some(ev => ev.date === date && ev.stage === s.stage && ev.name === name);
+        if (!exists) {
+          s.timeline.push({
+            id: Date.now(),
+            date: date,
+            stage: s.stage,
+            cat: cat,
+            name: name,
+            memo: '체크리스트 완료'
+          });
+        }
       }
     }
   }));
@@ -127,6 +133,16 @@ function addTimelineEvent(sid, cat, name) {
       const key = (cat === 'collateral' ? 'c:' : 'e:') + name;
       if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
       s.stageEfforts[s.stage][key] = true;
+    }
+  }));
+  syncUI(false);
+}
+
+function deleteTimelineEvent(sid, evId) {
+  accounts.forEach(a => a.oppties.forEach(o => {
+    const s = o.streams.find(x => x.id === sid);
+    if (s && s.timeline) {
+      s.timeline = s.timeline.filter(ev => ev.id !== evId);
     }
   }));
   syncUI(false);
