@@ -238,7 +238,20 @@ function importActivityCSV() {
     const p = line.split(',').map(s => s.trim());
     if (p.length < 6) return;
     const [cus, opp, prod, date, name, memo] = p;
-    // Find target stream
+    
+    let actStage = -1;
+    let actCat = '';
+    let actKey = '';
+    
+    for (let i = 0; i < 4; i++) {
+      if (kits[i].collateral.includes(name)) {
+        actStage = i; actCat = 'collateral'; actKey = 'c:' + name; break;
+      }
+      if (kits[i].engagement.includes(name)) {
+        actStage = i; actCat = 'engagement'; actKey = 'e:' + name; break;
+      }
+    }
+
     accounts.forEach(a => {
       if (a.customer !== cus) return;
       a.oppties.forEach(o => {
@@ -246,15 +259,19 @@ function importActivityCSV() {
         const s = o.streams.find(st => st.solId === prod);
         if (s) {
           if (!s.timeline) s.timeline = [];
-          // 중복 방지 로직 추가
-          const exists = s.timeline.some(ev => ev.date === date && ev.stage === s.stage && ev.name === name);
+          
+          const targetStage = actStage !== -1 ? actStage : s.stage;
+          const targetCat = actCat !== '' ? actCat : 'engagement';
+          const targetKey = actKey !== '' ? actKey : 'e:' + name;
+
+          const exists = s.timeline.some(ev => ev.date === date && ev.stage === targetStage && ev.name === name);
           if (!exists) {
-            s.timeline.push({ id: Date.now() + Math.random(), date, stage: s.stage, cat: 'engagement', name, memo });
+            s.timeline.push({ id: Date.now() + Math.random(), date, stage: targetStage, cat: targetCat, name, memo });
           }
-          // Check in checklist if exists
-          const key = 'e:' + name;
-          if (s.stageEfforts && s.stageEfforts[s.stage] && key in s.stageEfforts[s.stage]) {
-             s.stageEfforts[s.stage][key] = true;
+          
+          if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
+          if (s.stageEfforts[targetStage] && targetKey in s.stageEfforts[targetStage]) {
+             s.stageEfforts[targetStage][targetKey] = true;
           }
         }
       });
