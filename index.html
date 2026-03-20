@@ -99,6 +99,22 @@
   .effort-summary { margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.03); border-radius: 6px; }
   .effort-summary-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 6px; }
   .effort-summary-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+
+  /* Kit Manager */
+  .kit-mgr-section { border-bottom: 1px solid var(--border); margin-bottom: 15px; padding-bottom: 10px; }
+  .kit-mgr-title { font-size: 0.85em; font-weight: 700; color: var(--text-dim); cursor: pointer; display: flex; justify-content: space-between; }
+  .kit-mgr-body { margin-top: 10px; }
+  .kit-stage-tab { display: flex; gap: 2px; margin-bottom: 10px; }
+  .kit-stage-btn { flex: 1; padding: 5px 2px; font-size: 0.65em; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text-dim); cursor: pointer; text-align: center; }
+  .kit-stage-btn.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .kit-cat-title { font-size: 0.7em; font-weight: 700; color: var(--text-heading); margin: 8px 0 4px; }
+  .kit-edit-item { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
+  .kit-edit-input { flex: 1; background: var(--bg-hover); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; color: var(--text); font-size: 0.7em; outline: none; }
+  .kit-edit-input:focus { border-color: var(--accent); }
+  .kit-del-btn { width: 20px; height: 20px; border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 0.8em; border-radius: 3px; }
+  .kit-del-btn:hover { background: rgba(244,67,54,0.1); color: #f44336; }
+  .kit-add-btn { width: 100%; padding: 3px; font-size: 0.65em; border: 1px dashed var(--border); border-radius: 4px; background: none; color: var(--text-muted); cursor: pointer; margin-top: 4px; }
+  .kit-add-btn:hover { border-color: var(--accent); color: var(--accent); }
 </style>
 </head>
 <body>
@@ -109,8 +125,8 @@
 </div>
 
 <div class="container">
-  <h1>🎯 SA Sales Execution Map v5.0</h1>
-  <p class="subtitle">Effort Tracking — 도넛 게이지 + 활동 체크리스트 + 노력 시각화</p>
+  <h1>🎯 SA Sales Execution Map v5.1</h1>
+  <p class="subtitle">Customizable Sales Kit — 단계별 세일즈 자료/활동 직접 관리</p>
 
   <div class="main-layout">
     <div class="left-panel">
@@ -125,6 +141,18 @@
             <label class="config-label">Account Total Max (만원)</label>
             <input type="number" class="config-input" id="cfg-total-max" value="300000" oninput="syncUI(false)">
           </div>
+        </div>
+      </div>
+
+      <!-- Kit Manager -->
+      <div class="kit-mgr-section">
+        <div class="kit-mgr-title" onclick="toggleKitMgr()">
+          <span>📋 세일즈킷 관리</span>
+          <span id="kit-mgr-icon">▼</span>
+        </div>
+        <div id="kit-mgr-body" class="kit-mgr-body" style="display:none;">
+          <div class="kit-stage-tab" id="kit-stage-tabs"></div>
+          <div id="kit-mgr-content"></div>
         </div>
       </div>
 
@@ -200,13 +228,15 @@ const solutions = [
 const stages = ['Early Sales', 'Proposal / PoC', 'Pilot', 'Production'];
 const stageIcons = ['🔍', '📝', '🧪', '🚀'];
 
-// Kit items per stage (used as checklist keys)
+// Kit items per stage (used as checklist keys) — EDITABLE
 const kits = {
   0: { collateral: ['Discovery 질문지', '1-Pager', '성공사례 요약'], engagement: ['Discovery Session', 'Roadshow', 'Account Day'] },
   1: { collateral: ['Ref Architecture', 'PoC 시나리오', '경쟁비교표', '상세 제안서'], engagement: ['Live Demo', 'Navigate Workshop', 'Hands-on (기초)'] },
   2: { collateral: ['구축 체크리스트', 'KPI 합의서', '마이그레이션 플랜', '문제해결 가이드'], engagement: ['Hands-on (심화)', '에스컬레이션 체계', '운영팀 온보딩'] },
   3: { collateral: ['확산 로드맵', '표준 운영 가이드(SOP)', '성과 보고서', '라이선스 최적화'], engagement: ['챔피언 육성', '전략 리뷰', 'DevNation 연결'] }
 };
+
+let kitMgrStage = 0; // Currently selected stage in kit manager
 
 const colors = ['#EE0000','#2196F3','#4CAF50','#FF9800','#9C27B0','#00BCD4','#FF5722','#8BC34A','#E91E63','#009688'];
 
@@ -234,6 +264,89 @@ function effortColor(score) {
   if (score >= 0.7) return '#4CAF50';
   if (score >= 0.4) return '#FF9800';
   return '#f44336';
+}
+
+// ===== Kit Manager Functions =====
+function toggleKitMgr() {
+  const b = document.getElementById('kit-mgr-body');
+  const i = document.getElementById('kit-mgr-icon');
+  const h = b.style.display === 'none';
+  b.style.display = h ? 'block' : 'none';
+  i.textContent = h ? '▲' : '▼';
+  if (h) renderKitMgr();
+}
+
+function selectKitStage(s) { kitMgrStage = s; renderKitMgr(); }
+
+function renderKitMgr() {
+  // Tabs
+  document.getElementById('kit-stage-tabs').innerHTML = stages.map((st, i) =>
+    `<div class="kit-stage-btn ${kitMgrStage===i?'active':''}" onclick="selectKitStage(${i})">${stageIcons[i]} ${st}</div>`
+  ).join('');
+
+  const kit = kits[kitMgrStage];
+  const container = document.getElementById('kit-mgr-content');
+  container.innerHTML = `
+    <div class="kit-cat-title">📦 세일즈 자료 (Collateral)</div>
+    ${kit.collateral.map((item, idx) => `
+      <div class="kit-edit-item">
+        <input class="kit-edit-input" value="${item}" onchange="renameKitItem(${kitMgrStage},'collateral',${idx},this.value)" onclick="event.stopPropagation()">
+        <button class="kit-del-btn" onclick="deleteKitItem(${kitMgrStage},'collateral',${idx})">✕</button>
+      </div>
+    `).join('')}
+    <button class="kit-add-btn" onclick="addKitItem(${kitMgrStage},'collateral')">＋ 자료 추가</button>
+
+    <div class="kit-cat-title">🤝 활동 (Engagement)</div>
+    ${kit.engagement.map((item, idx) => `
+      <div class="kit-edit-item">
+        <input class="kit-edit-input" value="${item}" onchange="renameKitItem(${kitMgrStage},'engagement',${idx},this.value)" onclick="event.stopPropagation()">
+        <button class="kit-del-btn" onclick="deleteKitItem(${kitMgrStage},'engagement',${idx})">✕</button>
+      </div>
+    `).join('')}
+    <button class="kit-add-btn" onclick="addKitItem(${kitMgrStage},'engagement')">＋ 활동 추가</button>
+  `;
+}
+
+function addKitItem(stage, cat) {
+  const name = cat === 'collateral' ? '새 자료' : '새 활동';
+  kits[stage][cat].push(name);
+  // Update all existing streams at this stage
+  accounts.forEach(a => a.oppties.forEach(o => o.streams.forEach(s => {
+    if (s.stage === stage && s.efforts) {
+      const key = (cat === 'collateral' ? 'c:' : 'e:') + name;
+      s.efforts[key] = false;
+    }
+  })));
+  renderKitMgr();
+  syncUI(true);
+}
+
+function deleteKitItem(stage, cat, idx) {
+  const oldName = kits[stage][cat][idx];
+  const key = (cat === 'collateral' ? 'c:' : 'e:') + oldName;
+  kits[stage][cat].splice(idx, 1);
+  // Remove from all streams' efforts
+  accounts.forEach(a => a.oppties.forEach(o => o.streams.forEach(s => {
+    if (s.stage === stage && s.efforts) delete s.efforts[key];
+  })));
+  renderKitMgr();
+  syncUI(true);
+}
+
+function renameKitItem(stage, cat, idx, newName) {
+  const oldName = kits[stage][cat][idx];
+  if (oldName === newName) return;
+  const oldKey = (cat === 'collateral' ? 'c:' : 'e:') + oldName;
+  const newKey = (cat === 'collateral' ? 'c:' : 'e:') + newName;
+  kits[stage][cat][idx] = newName;
+  // Rename in all streams' efforts (preserve checked state)
+  accounts.forEach(a => a.oppties.forEach(o => o.streams.forEach(s => {
+    if (s.stage === stage && s.efforts && oldKey in s.efforts) {
+      s.efforts[newKey] = s.efforts[oldKey];
+      delete s.efforts[oldKey];
+    }
+  })));
+  syncUI(true);
 }
 
 function syncUI(full = true) {
@@ -505,3 +618,4 @@ syncUI(true);
 </script>
 </body>
 </html>
+html>
