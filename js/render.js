@@ -204,8 +204,8 @@ function renderSwimLane() {
   let minDate = new Date(), maxDate = new Date(0);
   allEvents.forEach(ev => {
     const d = new Date(ev.date);
-    if (d < minDate) minDate = d;
-    if (d > maxDate) maxDate = d;
+    if (d < minDate) minDate = new Date(d);
+    if (d > maxDate) maxDate = new Date(d);
   });
 
   if (maxDate < minDate) maxDate = new Date();
