@@ -236,20 +236,18 @@ function importActivityCSV() {
   if (!input) return;
   input.trim().split('\n').forEach(line => {
     const p = line.split(',').map(s => s.trim());
-    if (p.length < 6) return;
-    const [cus, opp, prod, date, name, memo] = p;
+    if (p.length < 7) return;
+    const [cus, opp, prod, stageStr, date, name, memo] = p;
+    const actStage = parseInt(stageStr, 10);
+    if (isNaN(actStage) || actStage < 0 || actStage > 3) return;
+
+    let actCat = 'engagement';
+    let actKey = 'e:' + name;
     
-    let actStage = -1;
-    let actCat = '';
-    let actKey = '';
-    
-    for (let i = 0; i < 4; i++) {
-      if (kits[i].collateral.includes(name)) {
-        actStage = i; actCat = 'collateral'; actKey = 'c:' + name; break;
-      }
-      if (kits[i].engagement.includes(name)) {
-        actStage = i; actCat = 'engagement'; actKey = 'e:' + name; break;
-      }
+    if (kits[actStage].collateral.includes(name)) {
+      actCat = 'collateral'; actKey = 'c:' + name;
+    } else if (kits[actStage].engagement.includes(name)) {
+      actCat = 'engagement'; actKey = 'e:' + name;
     }
 
     accounts.forEach(a => {
@@ -260,18 +258,15 @@ function importActivityCSV() {
         if (s) {
           if (!s.timeline) s.timeline = [];
           
-          const targetStage = actStage !== -1 ? actStage : s.stage;
-          const targetCat = actCat !== '' ? actCat : 'engagement';
-          const targetKey = actKey !== '' ? actKey : 'e:' + name;
-
+          const targetStage = actStage;
           const exists = s.timeline.some(ev => ev.date === date && ev.stage === targetStage && ev.name === name);
           if (!exists) {
-            s.timeline.push({ id: Date.now() + Math.random(), date, stage: targetStage, cat: targetCat, name, memo });
+            s.timeline.push({ id: Date.now() + Math.random(), date, stage: targetStage, cat: actCat, name, memo });
           }
           
           if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
-          if (s.stageEfforts[targetStage] && targetKey in s.stageEfforts[targetStage]) {
-             s.stageEfforts[targetStage][targetKey] = true;
+          if (s.stageEfforts[targetStage] && actKey in s.stageEfforts[targetStage]) {
+             s.stageEfforts[targetStage][actKey] = true;
           }
         }
       });
