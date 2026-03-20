@@ -1,10 +1,10 @@
 /* ===== data.js — Configuration & Static Data ===== */
 
 const solutions = [
-  { id:'ocp', name:'OpenShift (OCP)' }, { id:'ocp-virt', name:'OCP Virt' }, { id:'rhel', name:'RHEL' },
-  { id:'rhoai', name:'OpenShift AI' }, { id:'aap', name:'Ansible' }, { id:'acs', name:'ACS (Security)' },
-  { id:'acm', name:'ACM (Mgmt)' }, { id:'middleware', name:'Middleware' }, { id:'storage', name:'Storage' },
-  { id:'edge', name:'Edge' }, { id:'migration', name:'Migration' }
+  { id: 'ocp', name: 'OpenShift (OCP)' }, { id: 'ocp-virt', name: 'OCP Virt' }, { id: 'rhel', name: 'RHEL' },
+  { id: 'rhoai', name: 'OpenShift AI' }, { id: 'aap', name: 'Ansible' }, { id: 'acs', name: 'ACS (Security)' },
+  { id: 'acm', name: 'ACM (Mgmt)' }, { id: 'middleware', name: 'Middleware' }, { id: 'storage', name: 'Storage' },
+  { id: 'edge', name: 'Edge' }, { id: 'migration', name: 'Migration' }
 ];
 
 const stages = ['Early Sales', 'Proposal / PoC', 'Pilot', 'Production'];
@@ -30,7 +30,7 @@ const kits = {
   }
 };
 
-const colors = ['#EE0000','#2196F3','#4CAF50','#FF9800','#9C27B0','#00BCD4','#FF5722','#8BC34A','#E91E63','#009688'];
+const colors = ['#EE0000', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#00BCD4', '#FF5722', '#8BC34A', '#E91E63', '#009688'];
 
 /* ===== Cloud Sync (Google Sheets via GAS Web App) ===== */
 const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxF2Ufj5UKLAY2vQIbRbVsZ1fQCGA0S_mV1t6bQoG0urLIfGhF3XFSgDStGEEq39bos/exec";
@@ -41,7 +41,8 @@ async function fetchCloudData() {
   cloudSyncStatus = 'syncing';
   updateSyncBadge();
   try {
-    const res = await fetch(GAS_WEB_APP_URL);
+    // Add cache-busting timestamp to prevent browser from caching the JSON response
+    const res = await fetch(`${GAS_WEB_APP_URL}?t=${Date.now()}`);
     const json = await res.json();
     cloudSyncStatus = 'done';
     updateSyncBadge();
@@ -74,6 +75,6 @@ function updateSyncBadge() {
   const map = { idle: '☁️', syncing: '🔄', done: '✅', error: '❌' };
   badge.textContent = map[cloudSyncStatus] || '☁️';
   badge.title = cloudSyncStatus === 'done' ? 'Cloud 동기화 완료' :
-                cloudSyncStatus === 'syncing' ? '동기화 중...' :
-                cloudSyncStatus === 'error' ? '동기화 실패' : 'Cloud Sync';
+    cloudSyncStatus === 'syncing' ? '동기화 중...' :
+      cloudSyncStatus === 'error' ? '동기화 실패' : 'Cloud Sync';
 }
