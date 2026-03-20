@@ -389,18 +389,45 @@ function renderKit() {
     const tCont = document.getElementById('timeline-content');
     tCont.style.display = 'block';
 
-    if (!stream.timeline || !stream.timeline.length) {
-      tCont.innerHTML = '<p style="padding:20px;text-align:center;color:#888;font-size:0.8em;">기록된 활동이 없습니다. 체크리스트를 완료하거나 [＋] 버튼을 누르세요.</p>';
+    if (!stream.timeline) stream.timeline = [];
+    const grouped = { 0: [], 1: [], 2: [], 3: [] };
+    stream.timeline.forEach(ev => grouped[ev.stage].push(ev));
+
+    const sStage = stream.stage;
+    const stageKits = kits[sStage];
+    const existingNames = stream.timeline.filter(ev => ev.stage === sStage).map(ev => ev.name);
+
+    const recommended = [];
+    if (stageKits) {
+      ['collateral', 'engagement'].forEach(cat => {
+        stageKits[cat].forEach(item => {
+          if (!existingNames.includes(item)) recommended.push({ cat, name: item });
+        });
+      });
+    }
+
+    let recHtml = '';
+    if (recommended.length > 0) {
+      recHtml = `<div style="margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.03); border-radius: 6px; border-left: 3px solid var(--primary);">
+        <div style="font-size: 0.7em; font-weight: bold; color: var(--text); margin-bottom: 6px;">💡 [${stages[sStage]}] 단계 추천 (Next Best Action)</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+          ${recommended.map(r => `<button onclick="addTimelineEvent('${stream.id}', '${r.cat}', '${r.name}', ${sStage})" style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 3px 8px; font-size: 0.65em; cursor: pointer; color: var(--text-heading); transition: all 0.2s;" onmouseover="this.style.borderColor='var(--primary)'; this.style.color='var(--primary)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-heading)';">+ ${r.name}</button>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    let tlHtml = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <button class="btn-action" style="font-size:0.7em;padding:4px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);" onclick="addTimelineEvent('${stream.id}', 'window', '신규 커스텀 활동', ${sStage})">➕ 사용자 이력 직접 추가</button>
+      <button class="btn-action ${timelineEditMode ? 'edit-active' : ''}" style="font-size:0.7em;padding:4px 8px;" onclick="toggleTimelineEdit()">
+        ${timelineEditMode ? '✅ 수정 완료' : '✏️ 이력 수정'}
+      </button>
+    </div>
+    ${recHtml}
+    <div class="timeline-list">`;
+
+    if (stream.timeline.length === 0) {
+      tlHtml += '<p style="padding:20px;text-align:center;color:#888;font-size:0.8em;">기록된 활동이 없습니다. 위 추천 활동을 누르거나 직접 추가 버튼을 눌러 시작하세요.</p>';
     } else {
-      const grouped = { 0: [], 1: [], 2: [], 3: [] };
-      stream.timeline.forEach(ev => grouped[ev.stage].push(ev));
-
-      let tlHtml = `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-        <button class="btn-action ${timelineEditMode ? 'edit-active' : ''}" style="font-size:0.7em;padding:4px 8px;" onclick="toggleTimelineEdit()">
-          ${timelineEditMode ? '✅ 수정 완료' : '✏️ 이력 수정'}
-        </button>
-      </div><div class="timeline-list">`;
-
       [0, 1, 2, 3].forEach(st => {
         if (grouped[st].length === 0) return;
         grouped[st].sort((a, b) => new Date(b.date) - new Date(a.date));
