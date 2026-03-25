@@ -125,9 +125,10 @@ function renderKitMgr() {
   `;
 }
 
-// ===== ACCOUNT LIST (v8.3 — Opp Tree with Cross-sell/Upsell) =====
+// ===== ACCOUNT LIST (v8.3 — Opp Tree as flat siblings) =====
 
-function renderOppBox(acc, opp, depth) {
+// Renders a single opp box (no child nesting — children are rendered as siblings)
+function renderSingleOppBox(acc, opp, depth) {
   const sellBadge = opp.sellType
     ? `<span class="sell-badge sell-${opp.sellType}" title="${opp.sellType === 'upsell' ? '업셀' : '크로스셀'}">${opp.sellType === 'upsell' ? '⬆️ 업셀' : '🔀 크로스셀'}</span>`
     : '';
@@ -177,8 +178,17 @@ function renderOppBox(acc, opp, depth) {
       <button class="btn-action" style="font-size:0.6em;padding:2px 5px;background:var(--surface,#f5f5f5);color:#2196F3;border:1px dashed #2196F3;" onclick="addChildOpp(${acc.id},${opp.id},'cross-sell')">🔀 크로스셀</button>
       <button class="btn-action" style="font-size:0.6em;padding:2px 5px;background:var(--surface,#f5f5f5);color:#FF9800;border:1px dashed #FF9800;" onclick="addChildOpp(${acc.id},${opp.id},'upsell')">⬆️ 업셀</button>
     </div>
-    ${children.map(child => renderOppBox(acc, child, depth + 1)).join('')}
   </div>`;
+}
+
+// Flatten opp tree into sibling divs (parent first, then children) — no DOM nesting
+function renderOppTree(acc, opp, depth) {
+  let html = renderSingleOppBox(acc, opp, depth);
+  const children = getChildOppties(acc, opp.id);
+  children.forEach(child => {
+    html += renderOppTree(acc, child, depth + 1);
+  });
+  return html;
 }
 
 function renderAccountList() {
@@ -193,7 +203,7 @@ function renderAccountList() {
           ${acc.active !== false ? '👁️' : '🚫'}
         </button>
       </div>
-      ${isInactive ? '' : rootOppties.map(opp => renderOppBox(acc, opp, 0)).join('')}
+      ${isInactive ? '' : rootOppties.map(opp => renderOppTree(acc, opp, 0)).join('')}
     </div>`;
   }).join('');
 }
