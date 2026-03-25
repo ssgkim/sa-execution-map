@@ -1,4 +1,4 @@
-/* ===== state.js — State Management (v8.2) ===== */
+/* ===== state.js — State Management (v8.3) ===== */
 
 let accounts = [];
 let selectedStreamId = null;
@@ -81,6 +81,82 @@ function addAccount() {
   });
   saveLocalData();
   syncUI(true);
+}
+
+// ===== CHILD OPPORTUNITY (Cross-sell / Upsell) — v8.3 =====
+
+function addChildOpp(aId, parentOppId, sellType) {
+  if (currentSourceMode === 'demo') return;
+  const a = accounts.find(x => x.id === aId);
+  if (!a) return;
+  const id = Date.now();
+  const label = sellType === 'upsell' ? '업셀' : '크로스셀';
+  a.oppties.push({
+    id,
+    name: `${label} — 신규`,
+    parentOppId: parentOppId,
+    sellType: sellType, // 'cross-sell' | 'upsell'
+    streams: []
+  });
+  saveLocalData();
+  syncUI(true);
+}
+
+function updateOppSellType(aId, oId, sellType) {
+  if (currentSourceMode === 'demo') return;
+  const a = accounts.find(x => x.id === aId);
+  const o = a?.oppties.find(x => x.id === oId);
+  if (o) o.sellType = sellType;
+  saveLocalData();
+  syncUI(false);
+}
+
+function deleteOpp(aId, oId) {
+  if (currentSourceMode === 'demo') return;
+  const a = accounts.find(x => x.id === aId);
+  if (!a) return;
+  // Also delete all child oppties
+  const childIds = a.oppties.filter(o => o.parentOppId === oId).map(o => o.id);
+  a.oppties = a.oppties.filter(o => o.id !== oId && !childIds.includes(o.id));
+  // Clear selected stream if it belonged to deleted opp
+  const allStreamIds = new Set();
+  a.oppties.forEach(o => o.streams.forEach(s => allStreamIds.add(s.id)));
+  if (selectedStreamId && !allStreamIds.has(selectedStreamId)) {
+    // Check all accounts
+    let found = false;
+    accounts.forEach(ac => ac.oppties.forEach(op => op.streams.forEach(st => { if (st.id === selectedStreamId) found = true; })));
+    if (!found) selectedStreamId = null;
+  }
+  saveLocalData();
+  syncUI(true);
+}
+
+// Helper: get parent opportunity name
+function getParentOppName(a, opp) {
+  if (!opp.parentOppId) return null;
+  const parent = a.oppties.find(x => x.id === opp.parentOppId);
+  return parent ? parent.name : null;
+}
+
+// Helper: get all root oppties (no parent) for an account
+function getRootOppties(a) {
+  return a.oppties.filter(o => !o.parentOppId);
+}
+
+// Helper: get child oppties for a given opp
+function getChildOppties(a, oppId) {
+  return a.oppties.filter(o => o.parentOppId === oppId);
+}
+
+// Helper: calculate total deal value for an opp tree (self + children)
+function getOppTreeAmount(a, oppId) {
+  const opp = a.oppties.find(o => o.id === oppId);
+  if (!opp) return 0;
+  let total = opp.streams.reduce((s, st) => s + (st.amount || 0), 0);
+  getChildOppties(a, oppId).forEach(child => {
+    total += getOppTreeAmount(a, child.id);
+  });
+  return total;
 }
 
 function updateAccount(id, field, val) {

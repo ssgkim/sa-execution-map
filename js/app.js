@@ -1,4 +1,4 @@
-/* ===== app.js — Event Bindings & Initialization (v8.2) ===== */
+/* ===== app.js — Event Bindings & Initialization (v8.3) ===== */
 
 // Map click handler
 document.getElementById('map-canvas').addEventListener('click', (e) => {
@@ -94,7 +94,11 @@ function loadDemoData() {
       timeline: timeline || []
     };
   };
-  const mkOpp = (id, name, streams) => ({ id, name, streams });
+  const mkOpp = (id, name, streams, parentOppId, sellType) => {
+    const o = { id, name, streams };
+    if (parentOppId) { o.parentOppId = parentOppId; o.sellType = sellType || 'cross-sell'; }
+    return o;
+  };
   const mkAcc = (id, industry, customer, oppties, active) => ({ id, industry, customer, oppties, active: active !== false });
 
   accounts = [
@@ -111,6 +115,20 @@ function loadDemoData() {
           { id:6, stage:1, date:'2026-02-05', name:'Live Demo', memo:'이상거래 탐지 PoC' }
         ])
       ]),
+      // Cross-sell: 코어뱅킹 OCP PoC에서 AI 이상거래 탐지 니즈 발견
+      mkOpp(12, 'AI 이상거래 탐지 (크로스셀)', [
+        mkStream('rhoai', 1, 25000, [
+          { id:40, stage:0, date:'2026-02-10', name:'Discovery Session', memo:'코어뱅킹 PoC 중 AI 니즈 발견' },
+          { id:41, stage:1, date:'2026-03-01', name:'Live Demo', memo:'실시간 이상거래 탐지 시연' }
+        ])
+      ], 10, 'cross-sell'),
+      // Upsell: 코어뱅킹 OCP 노드 확장
+      mkOpp(13, 'OCP 노드 확장 (업셀)', [
+        mkStream('ocp', 1, 35000, [
+          { id:42, stage:1, date:'2026-03-05', name:'Ref Architecture', memo:'50→200 노드 확장 아키텍처' },
+          { id:43, stage:1, date:'2026-03-15', name:'상세 제안서', memo:'3년 확장 로드맵 포함' }
+        ])
+      ], 10, 'upsell'),
       mkOpp(11, '클라우드 인프라 전환', [
         mkStream('rhel', 3, 30000, [
           { id:7, stage:3, date:'2026-01-08', name:'확산 로드맵', memo:'2026 전체 이관 계획' },
@@ -132,6 +150,12 @@ function loadDemoData() {
           { id:14, stage:1, date:'2026-02-02', name:'PoC 시나리오', memo:'6주 PoC' }
         ])
       ]),
+      // Cross-sell: 5G 엣지에서 보안 니즈 발견
+      mkOpp(22, '엣지 보안 강화 (크로스셀)', [
+        mkStream('acs', 0, 12000, [
+          { id:44, stage:0, date:'2026-03-10', name:'Discovery Session', memo:'엣지 노드 보안 위협 평가' }
+        ])
+      ], 20, 'cross-sell'),
       mkOpp(21, '운영 자동화', [
         mkStream('aap', 2, 15000, [
           { id:15, stage:1, date:'2026-01-22', name:'Live Demo', memo:'네트워크 자동화 시연' },

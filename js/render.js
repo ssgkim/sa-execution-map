@@ -1,4 +1,4 @@
-/* ===== render.js — All UI Rendering (v8.2) ===== */
+/* ===== render.js — All UI Rendering (v8.3) ===== */
 
 function syncUI(full = true) {
   renderSourceSwitcher();
@@ -125,11 +125,66 @@ function renderKitMgr() {
   `;
 }
 
-// ===== ACCOUNT LIST =====
+// ===== ACCOUNT LIST (v8.3 — Opp Tree with Cross-sell/Upsell) =====
+
+function renderOppBox(acc, opp, depth) {
+  const sellBadge = opp.sellType
+    ? `<span class="sell-badge sell-${opp.sellType}" title="${opp.sellType === 'upsell' ? '업셀' : '크로스셀'}">${opp.sellType === 'upsell' ? '⬆️ 업셀' : '🔀 크로스셀'}</span>`
+    : '';
+  const indent = depth > 0 ? `margin-left:${depth * 16}px; border-left:2px solid ${opp.sellType === 'upsell' ? '#FF9800' : '#2196F3'}; padding-left:8px;` : '';
+  const treeAmount = getOppTreeAmount(acc, opp.id);
+  const children = getChildOppties(acc, opp.id);
+
+  return `<div class="oppty-box" style="${indent}">
+    <div style="display:flex;align-items:center;gap:5px;">
+      ${depth > 0 ? '<span style="font-size:0.7em;opacity:0.5;">↳</span>' : ''}
+      ${sellBadge}
+      <input class="oppty-name-input" style="flex:1;" value="${opp.name}" oninput="updateOpp(${acc.id},${opp.id},this.value)" onclick="event.stopPropagation()">
+      ${depth > 0 ? `
+        <select style="font-size:0.6em;padding:1px 3px;border:1px solid var(--border);border-radius:3px;background:var(--bg-card);color:var(--text-base);" onchange="updateOppSellType(${acc.id},${opp.id},this.value)" onclick="event.stopPropagation()">
+          <option value="cross-sell" ${opp.sellType === 'cross-sell' ? 'selected' : ''}>🔀 크로스셀</option>
+          <option value="upsell" ${opp.sellType === 'upsell' ? 'selected' : ''}>⬆️ 업셀</option>
+        </select>
+      ` : ''}
+      <button style="font-size:0.6em;border:none;background:none;cursor:pointer;color:var(--text-muted);opacity:0.6;" onclick="event.stopPropagation();deleteOpp(${acc.id},${opp.id})" title="오퍼튜니티 삭제">✕</button>
+    </div>
+    ${treeAmount > 0 && children.length > 0 ? `<div style="font-size:0.6em;color:var(--text-muted);margin:2px 0;">📊 트리 합계: ${treeAmount.toLocaleString()}만원</div>` : ''}
+    ${opp.streams.map(s => {
+      const score = getEffortScore(s);
+      const eColor = effortColor(score);
+      const isSel = selectedStreamId === s.id;
+      const gap = hasDiscoveryGap(s);
+      return `<div class="stream-item ${isSel ? 'active-stream' : ''}" onclick="selectStream('${s.id}')">
+        <div class="stream-row">
+          ${gap ? '<span title="Discovery Gap — Early Sales 완료율 50% 미만" style="margin-right:4px;">⚠️</span>' : ''}
+          <select class="stream-select" style="flex:1" onchange="updateStream('${s.id}','solId',this.value)" onclick="event.stopPropagation()">
+            ${solutions.map(sol => `<option value="${sol.id}" ${s.solId === sol.id ? 'selected' : ''}>${sol.name}</option>`).join('')}
+          </select>
+          <select class="stream-select" onchange="updateStream('${s.id}','stage',parseInt(this.value))" onclick="event.stopPropagation()">
+            ${stages.map((st, i) => `<option value="${i}" ${s.stage === i ? 'selected' : ''}>${stageIcons[i]}</option>`).join('')}
+          </select>
+          <input class="acc-input stream-amount" type="number" value="${s.amount}" oninput="updateStream('${s.id}','amount',parseInt(this.value))" onclick="event.stopPropagation()">
+          <button style="font-size:0.7em;border:none;background:none;cursor:pointer;color:var(--text-muted)" onclick="event.stopPropagation();deleteStream(${acc.id},${opp.id},'${s.id}')">✕</button>
+        </div>
+        <div class="effort-bar-wrap">
+          <span>Effort ${Math.round(score * 100)}%</span>
+          <div class="effort-bar"><div class="effort-bar-fill" style="width:${score * 100}%;background:${eColor}"></div></div>
+        </div>
+      </div>`;
+    }).join('')}
+    <div style="display:flex;gap:4px;flex-wrap:wrap;">
+      <button class="btn-action" style="font-size:0.65em;padding:2px 6px" onclick="addStream(${acc.id},${opp.id})">＋ 스트림</button>
+      <button class="btn-action" style="font-size:0.6em;padding:2px 5px;background:var(--surface,#f5f5f5);color:#2196F3;border:1px dashed #2196F3;" onclick="addChildOpp(${acc.id},${opp.id},'cross-sell')">🔀 크로스셀</button>
+      <button class="btn-action" style="font-size:0.6em;padding:2px 5px;background:var(--surface,#f5f5f5);color:#FF9800;border:1px dashed #FF9800;" onclick="addChildOpp(${acc.id},${opp.id},'upsell')">⬆️ 업셀</button>
+    </div>
+    ${children.map(child => renderOppBox(acc, child, depth + 1)).join('')}
+  </div>`;
+}
 
 function renderAccountList() {
   document.getElementById('account-list').innerHTML = accounts.map((acc, ai) => {
     const isInactive = acc.active === false || inactiveIndustries.has(acc.industry);
+    const rootOppties = getRootOppties(acc);
     return `<div class="account-card ${isInactive ? 'inactive-account' : ''}" style="border-top:3px solid ${colors[ai % colors.length]}">
       <div class="acc-header">
         <input class="acc-input industry" value="${acc.industry}" oninput="updateAccount(${acc.id},'industry',this.value)" onclick="event.stopPropagation()">
@@ -138,33 +193,7 @@ function renderAccountList() {
           ${acc.active !== false ? '👁️' : '🚫'}
         </button>
       </div>
-      ${isInactive ? '' : acc.oppties.map(opp => `<div class="oppty-box">
-        <input class="oppty-name-input" value="${opp.name}" oninput="updateOpp(${acc.id},${opp.id},this.value)" onclick="event.stopPropagation()">
-        ${opp.streams.map(s => {
-      const score = getEffortScore(s);
-      const eColor = effortColor(score);
-      const isSel = selectedStreamId === s.id;
-      const gap = hasDiscoveryGap(s);
-      return `<div class="stream-item ${isSel ? 'active-stream' : ''}" onclick="selectStream('${s.id}')">
-            <div class="stream-row">
-              ${gap ? '<span title="Discovery Gap — Early Sales 완료율 50% 미만" style="margin-right:4px;">⚠️</span>' : ''}
-              <select class="stream-select" style="flex:1" onchange="updateStream('${s.id}','solId',this.value)" onclick="event.stopPropagation()">
-                ${solutions.map(sol => `<option value="${sol.id}" ${s.solId === sol.id ? 'selected' : ''}>${sol.name}</option>`).join('')}
-              </select>
-              <select class="stream-select" onchange="updateStream('${s.id}','stage',parseInt(this.value))" onclick="event.stopPropagation()">
-                ${stages.map((st, i) => `<option value="${i}" ${s.stage === i ? 'selected' : ''}>${stageIcons[i]}</option>`).join('')}
-              </select>
-              <input class="acc-input stream-amount" type="number" value="${s.amount}" oninput="updateStream('${s.id}','amount',parseInt(this.value))" onclick="event.stopPropagation()">
-              <button style="font-size:0.7em;border:none;background:none;cursor:pointer;color:var(--text-muted)" onclick="event.stopPropagation();deleteStream(${acc.id},${opp.id},'${s.id}')">✕</button>
-            </div>
-            <div class="effort-bar-wrap">
-              <span>Effort ${Math.round(score * 100)}%</span>
-              <div class="effort-bar"><div class="effort-bar-fill" style="width:${score * 100}%;background:${eColor}"></div></div>
-            </div>
-          </div>`;
-    }).join('')}
-        <button class="btn-action" style="font-size:0.65em;padding:2px 6px" onclick="addStream(${acc.id},${opp.id})">＋ 스트림</button>
-      </div>`).join('')}
+      ${isInactive ? '' : rootOppties.map(opp => renderOppBox(acc, opp, 0)).join('')}
     </div>`;
   }).join('');
 }
@@ -263,6 +292,51 @@ function renderMap() {
       ctx.font = isSel ? 'bold 10px Segoe UI' : '9px Segoe UI'; ctx.textAlign = 'center';
       const gapIcon = gap ? '⚠️ ' : '';
       ctx.fillText(`${gapIcon}${acc.customer}:${sol ? sol.name : s.solId}`, xPos, yPos - r - 8);
+    });
+  });
+
+  // 3. Cross-sell / Upsell 연결선 (v8.3)
+  accounts.forEach(a => {
+    if (a.active === false || inactiveIndustries.has(a.industry)) return;
+    a.oppties.forEach(childOpp => {
+      if (!childOpp.parentOppId) return;
+      const parentOpp = a.oppties.find(o => o.id === childOpp.parentOppId);
+      if (!parentOpp) return;
+
+      // Connect each parent stream to each child stream
+      parentOpp.streams.forEach(ps => {
+        if (!activeFilters.has(ps.solId) || ps._rx == null) return;
+        childOpp.streams.forEach(cs2 => {
+          if (!activeFilters.has(cs2.solId) || cs2._rx == null) return;
+
+          const lineColor = childOpp.sellType === 'upsell' ? '#FF9800' : '#2196F3';
+          ctx.save();
+          ctx.setLineDash([4, 4]);
+          ctx.strokeStyle = lineColor;
+          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = 0.6;
+          ctx.beginPath();
+          ctx.moveTo(ps._rx, ps._ry);
+
+          // Curved line
+          const cpx = (ps._rx + cs2._rx) / 2;
+          const cpy = Math.min(ps._ry, cs2._ry) - 20;
+          ctx.quadraticCurveTo(cpx, cpy, cs2._rx, cs2._ry);
+          ctx.stroke();
+
+          // Arrow head
+          const angle = Math.atan2(cs2._ry - cpy, cs2._rx - cpx);
+          ctx.setLineDash([]);
+          ctx.fillStyle = lineColor;
+          ctx.beginPath();
+          ctx.moveTo(cs2._rx, cs2._ry);
+          ctx.lineTo(cs2._rx - 8 * Math.cos(angle - 0.4), cs2._ry - 8 * Math.sin(angle - 0.4));
+          ctx.lineTo(cs2._rx - 8 * Math.cos(angle + 0.4), cs2._ry - 8 * Math.sin(angle + 0.4));
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        });
+      });
     });
   });
 }
@@ -551,6 +625,7 @@ function renderKit() {
 function renderDashboard() {
   const dash = document.getElementById('dashboard-content');
   let totalEvents = 0, thisMonth = 0, activeDeals = 0;
+  let crossSellCount = 0, upsellCount = 0, crossSellAmount = 0, upsellAmount = 0;
   const now = new Date();
   const monthStr = now.toISOString().substring(0, 7);
   const accountStats = {};
@@ -560,6 +635,9 @@ function renderDashboard() {
     let accEvents = 0;
     a.oppties.forEach(o => {
       activeDeals += o.streams.length;
+      const oppAmount = o.streams.reduce((s, st) => s + (st.amount || 0), 0);
+      if (o.sellType === 'cross-sell') { crossSellCount++; crossSellAmount += oppAmount; }
+      if (o.sellType === 'upsell') { upsellCount++; upsellAmount += oppAmount; }
       o.streams.forEach(s => {
         if (s.timeline) {
           totalEvents += s.timeline.length;
@@ -572,6 +650,7 @@ function renderDashboard() {
   });
 
   const topAccs = Object.entries(accountStats).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const hasSellData = crossSellCount + upsellCount > 0;
 
   dash.innerHTML = `
     <div class="dash-grid">
@@ -579,6 +658,23 @@ function renderDashboard() {
       <div class="dash-stat"><span>이번 달</span><strong>${thisMonth}건</strong></div>
       <div class="dash-stat"><span>활성 딜</span><strong>${activeDeals}건</strong></div>
     </div>
+    ${hasSellData ? `
+    <div style="margin-top:12px; padding:10px; background:rgba(0,0,0,0.02); border-radius:8px;">
+      <div style="font-size:0.8em; font-weight:bold; margin-bottom:8px;">🔀⬆️ Cross-sell / Upsell</div>
+      <div class="dash-grid">
+        <div class="dash-stat" style="border-left:3px solid #2196F3;">
+          <span>🔀 크로스셀</span>
+          <strong>${crossSellCount}건</strong>
+          <small style="font-size:0.7em;color:var(--text-muted);">${crossSellAmount.toLocaleString()}만</small>
+        </div>
+        <div class="dash-stat" style="border-left:3px solid #FF9800;">
+          <span>⬆️ 업셀</span>
+          <strong>${upsellCount}건</strong>
+          <small style="font-size:0.7em;color:var(--text-muted);">${upsellAmount.toLocaleString()}만</small>
+        </div>
+      </div>
+    </div>
+    ` : ''}
     <div style="margin-top:15px; font-size:0.8em;">
       <b>🥇 Top 5 Active Accounts</b>
       ${topAccs.map(([name, count]) => `

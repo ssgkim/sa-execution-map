@@ -1,4 +1,4 @@
-/* ===== data.js — Configuration & Static Data (v8.2) ===== */
+/* ===== data.js — Configuration & Static Data (v8.3) ===== */
 
 const solutions = [
   { id: 'ocp', name: 'OpenShift (OCP)', color: '#EE0000' },
