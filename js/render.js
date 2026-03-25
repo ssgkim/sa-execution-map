@@ -1,12 +1,72 @@
-/* ===== render.js — All UI Rendering (v6.3) ===== */
+/* ===== render.js — All UI Rendering (v8.2) ===== */
 
 function syncUI(full = true) {
+  renderSourceSwitcher();
+  renderProfileSelector();
   renderFilter();
   if (full) renderAccountList();
   renderMap();
   renderSwimLane();
   renderKit();
   renderDashboard();
+}
+
+// ===== SOURCE & PROFILE (v8.0 → v8.2) =====
+
+function renderSourceSwitcher() {
+  const modes = ['cloud', 'local', 'demo'];
+  modes.forEach(m => {
+    const btn = document.getElementById(`src-btn-${m}`);
+    if (btn) btn.classList.toggle('active', currentSourceMode === m);
+  });
+  const profileCont = document.getElementById('profile-selector-container');
+  if (profileCont) {
+    profileCont.style.display = currentSourceMode === 'cloud' ? 'block' : 'none';
+  }
+}
+
+function renderProfileSelector() {
+  const select = document.getElementById('profile-select');
+  if (!select) return;
+  select.innerHTML = profiles.map((p, i) =>
+    `<option value="${i}" ${currentProfileIndex === i ? 'selected' : ''}>${p.name}</option>`
+  ).join('');
+}
+
+function openSettings() {
+  const modal = document.getElementById('settings-modal');
+  if (modal) { modal.style.display = 'flex'; renderSettings(); }
+}
+
+function closeSettings() {
+  const modal = document.getElementById('settings-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function renderSettings() {
+  const container = document.getElementById('profiles-list-container');
+  if (!container) return;
+  container.innerHTML = profiles.map((p, i) => `
+    <div style="padding:8px; border:1px solid var(--border); border-radius:6px; margin-bottom:8px;">
+      <input type="text" class="config-input" value="${p.name}" onchange="updateProfile(${i}, this.value, profiles[${i}].url)" style="width:100%; margin-bottom:4px; font-weight:bold;">
+      <input type="text" class="config-input" value="${p.url}" onchange="updateProfile(${i}, profiles[${i}].name, this.value)" style="width:100%; font-size:0.75em;">
+      <div style="display:flex; gap:5px; margin-top:5px;">
+        <button class="btn-action" style="background:${currentProfileIndex === i ? '#4CAF50' : 'var(--border)'}; font-size:0.7em; ${currentProfileIndex === i ? 'color:#fff;' : ''}" onclick="selectProfile(${i})">
+          ${currentProfileIndex === i ? '✅ 선택됨' : '선택'}
+        </button>
+        <button class="btn-action" style="background:#f44336; font-size:0.7em; color:#fff;" onclick="deleteProfile(${i})">삭제</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addNewProfile() {
+  const nameInput = document.getElementById('new-profile-name');
+  const urlInput = document.getElementById('new-profile-url');
+  if (!nameInput.value || !urlInput.value) return alert('이름과 URL을 모두 입력하세요.');
+  addProfile(nameInput.value, urlInput.value);
+  nameInput.value = '';
+  urlInput.value = '';
 }
 
 // ===== FILTER =====
@@ -23,6 +83,18 @@ function renderFilter() {
       ${solutions.map(s => `<div class="sol-tag ${activeFilters.has(s.id) ? 'active' : ''}" onclick="toggleSolFilter('${s.id}')">${s.name}</div>`).join('')}
     </div>
   `;
+  renderLegend();
+}
+
+function renderLegend() {
+  const container = document.getElementById('map-legend');
+  if (!container) return;
+  container.innerHTML = solutions.map(s =>
+    `<div style="display:inline-flex;align-items:center;gap:4px;margin:2px 6px;cursor:pointer;font-size:0.75em;${activeFilters.has(s.id) ? '' : 'opacity:0.4'}" onclick="toggleSolFilter('${s.id}')">
+      <span style="width:8px;height:8px;border-radius:50%;background:${s.color};display:inline-block;"></span>
+      <span>${s.name}</span>
+    </div>`
+  ).join('');
 }
 
 // ===== KIT MANAGER =====
@@ -72,8 +144,10 @@ function renderAccountList() {
       const score = getEffortScore(s);
       const eColor = effortColor(score);
       const isSel = selectedStreamId === s.id;
+      const gap = hasDiscoveryGap(s);
       return `<div class="stream-item ${isSel ? 'active-stream' : ''}" onclick="selectStream('${s.id}')">
             <div class="stream-row">
+              ${gap ? '<span title="Discovery Gap — Early Sales 완료율 50% 미만" style="margin-right:4px;">⚠️</span>' : ''}
               <select class="stream-select" style="flex:1" onchange="updateStream('${s.id}','solId',this.value)" onclick="event.stopPropagation()">
                 ${solutions.map(sol => `<option value="${sol.id}" ${s.solId === sol.id ? 'selected' : ''}>${sol.name}</option>`).join('')}
               </select>
@@ -152,11 +226,11 @@ function renderMap() {
     sl.forEach(item => {
       const { s, acc, ai } = item;
 
-      // 필터 적용
       if (acc.active === false || inactiveIndustries.has(acc.industry)) return;
       if (!activeFilters.has(s.solId)) return;
 
-      const color = colors[ai % colors.length];
+      const sol = solutions.find(x => x.id === s.solId);
+      const color = sol ? sol.color : '#999';
       const xPos = s._rx;
       const yPos = s._ry;
       const baseR = s._rr;
@@ -164,12 +238,17 @@ function renderMap() {
       const r = isSel ? baseR + 3 : baseR;
       const score = getEffortScore(s);
       const eColor = effortColor(score);
+      const gap = hasDiscoveryGap(s);
 
+      // Discovery Gap → dashed ring
+      if (gap) ctx.setLineDash([4, 3]);
       ctx.beginPath(); ctx.arc(xPos, yPos, r + 3, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 4; ctx.stroke();
+      if (gap) ctx.setLineDash([]);
+
       if (score > 0) {
         ctx.beginPath(); ctx.arc(xPos, yPos, r + 3, -Math.PI / 2, -Math.PI / 2 + score * Math.PI * 2);
-        ctx.strokeStyle = eColor; ctx.lineWidth = 4; ctx.stroke();
+        ctx.strokeStyle = gap ? '#f44336' : eColor; ctx.lineWidth = 4; ctx.stroke();
       }
       ctx.globalAlpha = isSel ? 1 : 0.85;
       ctx.fillStyle = color;
@@ -182,7 +261,8 @@ function renderMap() {
       ctx.globalAlpha = 1;
       ctx.fillStyle = isSel ? cs.getPropertyValue('--text-heading') : cs.getPropertyValue('--text-dim');
       ctx.font = isSel ? 'bold 10px Segoe UI' : '9px Segoe UI'; ctx.textAlign = 'center';
-      ctx.fillText(`${acc.customer}:${solutions.find(x => x.id === s.solId).name}`, xPos, yPos - r - 8);
+      const gapIcon = gap ? '⚠️ ' : '';
+      ctx.fillText(`${gapIcon}${acc.customer}:${sol ? sol.name : s.solId}`, xPos, yPos - r - 8);
     });
   });
 }
@@ -284,14 +364,14 @@ function renderSwimLane() {
     ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(W - 20, y); ctx.stroke();
 
     ctx.fillStyle = '#666'; ctx.font = 'bold 10px Segoe UI'; ctx.textAlign = 'right';
-    ctx.fillText(solutions.find(x => x.id === s.solId).name, padX - 10, y + 3);
+    ctx.fillText(solutions.find(x => x.id === s.solId)?.name || s.solId, padX - 10, y + 3);
 
     if (s.timeline) {
       s.timeline.forEach(ev => {
         const x = padX + ((new Date(ev.date) - minDate) / timeSpan) * (W - padX - 40);
-        const color = ['#9e9e9e', '#2196f3', '#ff9800', '#4caf50'][ev.stage];
+        const evColor = ['#9e9e9e', '#2196f3', '#ff9800', '#4caf50'][ev.stage];
 
-        ctx.fillStyle = color;
+        ctx.fillStyle = evColor;
         ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
 
@@ -324,9 +404,8 @@ function renderKit() {
   panel.style.display = 'block';
   const sol = solutions.find(x => x.id === stream.solId);
   const score = getEffortScore(stream);
-  const eColor = effortColor(score);
 
-  document.getElementById('kit-title').innerHTML = `🏢 [${acc.industry}] <b>${acc.customer}</b> — ${sol.name}`;
+  document.getElementById('kit-title').innerHTML = `🏢 [${acc.industry}] <b>${acc.customer}</b> — ${sol ? sol.name : stream.solId}`;
   document.getElementById('kit-meta').innerHTML = `오퍼튜니티: ${opp.name} | 딜 단계: <b>${stages[stream.stage]}</b> | 금액: <b>${stream.amount.toLocaleString()}만원</b>`;
 
   document.getElementById('kit-tabs').innerHTML = `
@@ -415,7 +494,7 @@ function renderKit() {
     }
 
     let tlHtml = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <button class="btn-action" style="font-size:0.7em;padding:4px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);" onclick="addTimelineEvent('${stream.id}', 'window', '신규 커스텀 활동', ${sStage})">➕ 사용자 이력 직접 추가</button>
+      <button class="btn-action" style="font-size:0.7em;padding:4px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);" onclick="addTimelineEvent('${stream.id}', 'engagement', '신규 커스텀 활동', ${sStage})">➕ 사용자 이력 직접 추가</button>
       <button class="btn-action ${timelineEditMode ? 'edit-active' : ''}" style="font-size:0.7em;padding:4px 8px;" onclick="toggleTimelineEdit()">
         ${timelineEditMode ? '✅ 수정 완료' : '✏️ 이력 수정'}
       </button>
@@ -460,9 +539,9 @@ function renderKit() {
           </div>
         `;
       });
-      tlHtml += '</div>';
-      tCont.innerHTML = tlHtml;
     }
+    tlHtml += '</div>';
+    tCont.innerHTML = tlHtml;
     document.getElementById('effort-summary').innerHTML = '';
   }
 }

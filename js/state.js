@@ -1,4 +1,4 @@
-/* ===== state.js — State Management (v6.3) ===== */
+/* ===== state.js — State Management (v8.2) ===== */
 
 let accounts = [];
 let selectedStreamId = null;
@@ -9,6 +9,14 @@ let kitTab = 'checklist'; // 'checklist' | 'timeline'
 let kitViewStage = null; // null = follow stream.stage
 let timelineEditMode = false;
 let timelineAccordionState = { 0: true, 1: true, 2: true, 3: true };
+
+// Persist local data when in local mode
+function saveLocalData() {
+  if (currentSourceMode === 'local') {
+    localStorage.setItem('sa_map_local_accounts', JSON.stringify(accounts));
+    localStorage.setItem('sa_map_local_kits', JSON.stringify(kits));
+  }
+}
 
 // Helper: get merged kit { collateral:[], engagement:[] } for a given solId + stage
 // Rules: items with solId === '*' (wildcard) + items matching the exact solId
@@ -41,6 +49,21 @@ function getEffortScore(s) {
   return keys.filter(k => efforts[k]).length / keys.length;
 }
 
+// Discovery Gap Detection (v8.0)
+function hasDiscoveryGap(stream) {
+  if (stream.stage < 1) return false;
+  const score0 = getStageEffortScore(stream, 0);
+  return score0 < 0.5;
+}
+
+function getStageEffortScore(stream, stage) {
+  const efforts = stream.stageEfforts ? stream.stageEfforts[stage] : null;
+  if (!efforts) return 0;
+  const keys = Object.keys(efforts);
+  if (!keys.length) return 0;
+  return keys.filter(k => efforts[k]).length / keys.length;
+}
+
 function effortColor(score) {
   if (score >= 0.7) return '#4CAF50';
   if (score >= 0.4) return '#FF9800';
@@ -50,62 +73,91 @@ function effortColor(score) {
 // ===== ACCOUNT ACTIONS =====
 
 function addAccount() {
+  if (currentSourceMode === 'demo') return alert('Demo 모드에서는 수정할 수 없습니다.');
   const id = Date.now();
   accounts.push({
     id, industry: '산업', customer: '고객사', active: true,
     oppties: [{ id: id + 1, name: '신규 오퍼튜니티', streams: [] }]
   });
+  saveLocalData();
   syncUI(true);
 }
 
 function updateAccount(id, field, val) {
+  if (currentSourceMode === 'demo') return;
   const a = accounts.find(x => x.id === id);
   if (a) a[field] = val;
+  saveLocalData();
   syncUI(field === 'industry');
 }
 
 function updateOpp(aId, oId, val) {
+  if (currentSourceMode === 'demo') return;
   const a = accounts.find(x => x.id === aId);
   const o = a.oppties.find(x => x.id === oId);
   if (o) o.name = val;
+  saveLocalData();
   syncUI(false);
 }
 
 function addStream(aId, oId) {
+  if (currentSourceMode === 'demo') return;
   const a = accounts.find(x => x.id === aId);
   const o = a.oppties.find(x => x.id === oId);
   const sid = `s-${Date.now()}`;
   o.streams.push({
     id: sid, solId: 'ocp', stage: 0, amount: 1000, hurdle: 30,
-    stageEfforts: { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) },
+    stageEfforts: { 
+      0: buildEfforts(0, 'ocp'), 
+      1: buildEfforts(1, 'ocp'), 
+      2: buildEfforts(2, 'ocp'), 
+      3: buildEfforts(3, 'ocp') 
+    },
     timeline: []
   });
   selectedStreamId = sid;
   kitViewStage = null;
   timelineEditMode = false;
+  saveLocalData();
   syncUI(true);
 }
 
 function updateStream(sid, field, val) {
+  if (currentSourceMode === 'demo') return;
   accounts.forEach(a => a.oppties.forEach(o => {
     const s = o.streams.find(x => x.id === sid);
     if (s) {
       s[field] = val;
-      if (!s.stageEfforts) {
-        s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
-        if (s.efforts) s.stageEfforts[s.stage] = s.efforts;
+      if (!s.stageEfforts || field === 'solId') {
+        const oldEfforts = s.stageEfforts || { 0: {}, 1: {}, 2: {}, 3: {} };
+        s.stageEfforts = { 
+          0: buildEfforts(0, s.solId), 
+          1: buildEfforts(1, s.solId), 
+          2: buildEfforts(2, s.solId), 
+          3: buildEfforts(3, s.solId) 
+        };
+        // Preserve check status if keys match
+        for(let st=0; st<4; st++) {
+          for(let key in s.stageEfforts[st]) {
+            if(oldEfforts[st] && key in oldEfforts[st]) {
+              s.stageEfforts[st][key] = oldEfforts[st][key];
+            }
+          }
+        }
       }
     }
   }));
+  saveLocalData();
   syncUI(false);
 }
 
 function toggleEffort(sid, key, vStage) {
+  if (currentSourceMode === 'demo') return;
   accounts.forEach(a => a.oppties.forEach(o => {
     const s = o.streams.find(x => x.id === sid);
     if (s) {
       const targetStage = vStage !== undefined ? vStage : s.stage;
-      if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
+      if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0, s.solId), 1: buildEfforts(1, s.solId), 2: buildEfforts(2, s.solId), 3: buildEfforts(3, s.solId) };
       const currentVal = !!s.stageEfforts[targetStage][key];
       s.stageEfforts[targetStage][key] = !currentVal;
 
@@ -127,7 +179,7 @@ function toggleEffort(sid, key, vStage) {
           };
           s.timeline.push(newEvent);
 
-          // Cloud Sync (v7.0)
+          // Cloud Sync
           postTimelineToCloud({
             customer: a.customer,
             opportunity: o.name,
@@ -141,10 +193,12 @@ function toggleEffort(sid, key, vStage) {
       }
     }
   }));
+  saveLocalData();
   syncUI(false);
 }
 
 function addTimelineEvent(sid, cat, name, vStage) {
+  if (currentSourceMode === 'demo') return;
   accounts.forEach(a => a.oppties.forEach(o => {
     const s = o.streams.find(x => x.id === sid);
     if (s) {
@@ -160,7 +214,7 @@ function addTimelineEvent(sid, cat, name, vStage) {
       };
       s.timeline.push(newEvent);
 
-      // Cloud Sync (v7.0)
+      // Cloud Sync
       postTimelineToCloud({
         customer: a.customer,
         opportunity: o.name,
@@ -172,19 +226,21 @@ function addTimelineEvent(sid, cat, name, vStage) {
       });
 
       const key = (cat === 'collateral' ? 'c:' : 'e:') + name;
-      if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
+      if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0, s.solId), 1: buildEfforts(1, s.solId), 2: buildEfforts(2, s.solId), 3: buildEfforts(3, s.solId) };
       s.stageEfforts[targetStage][key] = true;
     }
   }));
+  saveLocalData();
   syncUI(false);
 }
 
 async function syncTimelineUpdateToCloud(customer, opportunity, solId, stage, name, oldDate, updates) {
-  if (!GAS_WEB_APP_URL) return;
+  const url = getActiveGASUrl();
+  if (!url || currentSourceMode !== 'cloud') return;
   const badge = document.getElementById('sync-badge');
   try {
     if (badge) badge.textContent = '🔄';
-    await fetch(GAS_WEB_APP_URL, {
+    await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
@@ -207,7 +263,7 @@ function exportTimelineCSV() {
       o.streams.forEach(s => {
         if (s.timeline) {
           s.timeline.forEach(ev => {
-            const memo = String(ev.memo || '').replace(/,/g, ' '); // 콤마 텍스트 방어
+            const memo = String(ev.memo || '').replace(/,/g, ' ');
             csv.push(`${a.customer},${o.name},${s.solId},${ev.stage},${ev.date},${ev.name},${memo}`);
           });
         }
@@ -230,6 +286,7 @@ function exportTimelineCSV() {
 }
 
 function updateTimelineEvent(sid, evId, field, val) {
+  if (currentSourceMode === 'demo') return;
   accounts.forEach(a => a.oppties.forEach(o => {
     const s = o.streams.find(x => x.id === sid);
     if (s && s.timeline) {
@@ -241,24 +298,29 @@ function updateTimelineEvent(sid, evId, field, val) {
       }
     }
   }));
+  saveLocalData();
   syncUI(false);
 }
 
 function deleteTimelineEvent(sid, evId) {
+  if (currentSourceMode === 'demo') return;
   accounts.forEach(a => a.oppties.forEach(o => {
     const s = o.streams.find(x => x.id === sid);
     if (s && s.timeline) {
       s.timeline = s.timeline.filter(ev => ev.id !== evId);
     }
   }));
+  saveLocalData();
   syncUI(false);
 }
 
 function deleteStream(aId, oId, sid) {
+  if (currentSourceMode === 'demo') return;
   const a = accounts.find(x => x.id === aId);
   const o = a.oppties.find(x => x.id === oId);
   o.streams = o.streams.filter(x => x.id !== sid);
   if (selectedStreamId === sid) selectedStreamId = null;
+  saveLocalData();
   syncUI(true);
 }
 
@@ -289,6 +351,7 @@ function toggleIndustryFilter(ind) {
 function toggleAccountActive(aId, currentActive) {
   const a = accounts.find(x => x.id === aId);
   if (a) a.active = !currentActive;
+  saveLocalData();
   syncUI(true);
 }
 
@@ -313,7 +376,6 @@ function toggleTimelineEdit() {
   renderKit();
 }
 
-
 function toggleTimelineAccordion(st) {
   timelineAccordionState[st] = !timelineAccordionState[st];
   renderKit();
@@ -334,18 +396,21 @@ async function importCSV() {
     uploadRows.push([ind, cus, opp, prod, parseInt(stage) || 0, parseInt(amt) || 0]);
   });
 
-  if (uploadRows.length > 0) {
+  if (uploadRows.length > 0 && currentSourceMode === 'cloud') {
+    const url = getActiveGASUrl();
     try {
-      await fetch(GAS_WEB_APP_URL, {
+      await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'bulkAppend', sheetName: 'Accounts', payload: uploadRows })
       });
+      console.log('✅ Accounts Bulk Upload 완료');
     } catch (e) { console.error('Bulk Import Error:', e); }
   }
 
-  await init(); // Fetch fresh data from cloud and rerender
+  await init();
   document.getElementById('csv-input').value = '';
+  alert('데이터 임포트가 완료되었습니다.');
 }
 
 async function importActivityCSV() {
@@ -363,21 +428,24 @@ async function importActivityCSV() {
     uploadRows.push([cus, opp, prod, actStage, date, name, memo]);
   });
 
-  if (uploadRows.length > 0) {
+  if (uploadRows.length > 0 && currentSourceMode === 'cloud') {
+    const url = getActiveGASUrl();
     try {
-      await fetch(GAS_WEB_APP_URL, {
+      await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'bulkAppend', sheetName: 'Timeline', payload: uploadRows })
       });
+      console.log('✅ Timeline Bulk Upload 완료');
     } catch (e) { console.error('Activity Import Error:', e); }
   }
 
   await init();
   document.getElementById('activity-csv-input').value = '';
+  alert('타임라인 데이터 전송이 완료되었습니다.');
 }
 
-// ===== KIT MANAGER ACTIONS =====
+// ===== KIT MANAGER ACTIONS (v8.1 — syncGlobalKitsToStreams) =====
 
 function toggleKitMgr() {
   const b = document.getElementById('kit-mgr-body');
@@ -390,54 +458,101 @@ function toggleKitMgr() {
 
 function selectKitStage(s) { kitMgrStage = s; renderKitMgr(); }
 
+/**
+ * 전역 kits 설정 변경을 이미 생성된 모든 스트림의 stageEfforts에 반영 (CRITICAL)
+ */
+function syncGlobalKitsToStreams(stage, cat, action, oldName, newName) {
+  const prefix = (cat === 'collateral' ? 'c:' : 'e:');
+  const oldKey = prefix + oldName;
+  const newKey = prefix + newName;
+
+  accounts.forEach(a => {
+    a.oppties.forEach(o => {
+      o.streams.forEach(s => {
+        if (!s.stageEfforts) {
+          s.stageEfforts = { 0: buildEfforts(0, s.solId), 1: buildEfforts(1, s.solId), 2: buildEfforts(2, s.solId), 3: buildEfforts(3, s.solId) };
+        }
+        
+        const efforts = s.stageEfforts[stage];
+        if (!efforts) return;
+
+        if (action === 'add') {
+          if (!(newKey in efforts)) efforts[newKey] = false;
+        } else if (action === 'delete') {
+          delete efforts[oldKey];
+        } else if (action === 'rename') {
+          if (oldKey in efforts) {
+            efforts[newKey] = efforts[oldKey];
+            delete efforts[oldKey];
+          } else {
+            efforts[newKey] = false;
+          }
+          if (s.timeline) {
+            s.timeline.forEach(ev => {
+              if (ev.stage === stage && ev.name === oldName) ev.name = newName;
+            });
+          }
+        }
+      });
+    });
+  });
+}
+
 function addKitItem(stage, cat) {
+  if (currentSourceMode === 'demo') return;
   const name = cat === 'collateral' ? '새 자료' : '새 활동';
-  kits[stage][cat].push(name);
-  accounts.forEach(a => a.oppties.forEach(o => o.streams.forEach(s => {
-    if (!s.stageEfforts) s.stageEfforts = { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) };
-    const key = (cat === 'collateral' ? 'c:' : 'e:') + name;
-    s.stageEfforts[stage][key] = false;
-  })));
+  kits.push({ solId: '*', stage: stage, cat: cat, name: name });
+  
+  syncGlobalKitsToStreams(stage, cat, 'add', null, name);
+  
   renderKitMgr();
+  saveLocalData();
   syncUI(true);
+  postKitsToCloud(kits);
+  console.log('✅ 세일즈킷 추가 및 전역 동기화 완료');
 }
 
 function deleteKitItem(stage, cat, idx) {
-  const oldName = kits[stage][cat][idx];
-  const key = (cat === 'collateral' ? 'c:' : 'e:') + oldName;
-  kits[stage][cat].splice(idx, 1);
-  accounts.forEach(a => a.oppties.forEach(o => o.streams.forEach(s => {
-    if (s.stageEfforts) delete s.stageEfforts[stage][key];
-  })));
+  if (currentSourceMode === 'demo') return;
+  const matching = kits.filter(k => k.stage === stage && k.cat === cat && k.solId === '*');
+  if (idx >= matching.length) return;
+  const target = matching[idx];
+  const oldName = target.name;
+  
+  const realIdx = kits.indexOf(target);
+  if (realIdx !== -1) kits.splice(realIdx, 1);
+  
+  syncGlobalKitsToStreams(stage, cat, 'delete', oldName, null);
+  
   renderKitMgr();
+  saveLocalData();
   syncUI(true);
+  postKitsToCloud(kits);
+  alert(`'${oldName}' 항목이 삭제되었습니다. 모든 파이프라인에서 해당 체크리스트가 제거되었습니다.`);
 }
 
 function renameKitItem(stage, cat, idx, newName) {
-  const oldName = kits[stage][cat][idx];
+  if (currentSourceMode === 'demo') return;
+  const matching = kits.filter(k => k.stage === stage && k.cat === cat && k.solId === '*');
+  if (idx >= matching.length) return;
+  const target = matching[idx];
+  const oldName = target.name;
   if (oldName === newName) return;
-  const oldKey = (cat === 'collateral' ? 'c:' : 'e:') + oldName;
-  const newKey = (cat === 'collateral' ? 'c:' : 'e:') + newName;
-  kits[stage][cat][idx] = newName;
-  accounts.forEach(a => a.oppties.forEach(o => o.streams.forEach(s => {
-    if (s.stageEfforts && oldKey in s.stageEfforts[stage]) {
-      s.stageEfforts[stage][newKey] = s.stageEfforts[stage][oldKey];
-      delete s.stageEfforts[stage][oldKey];
-    }
-    if (s.timeline) {
-      s.timeline.forEach(ev => { if (ev.stage === stage && ev.name === oldName) ev.name = newName; });
-    }
-  })));
-  syncUI(true);
-}
 
-// ===== THEME =====
+  target.name = newName;
+  
+  syncGlobalKitsToStreams(stage, cat, 'rename', oldName, newName);
+  
+  saveLocalData();
+  syncUI(true);
+  postKitsToCloud(kits);
+  console.log(`✅ 세일즈킷 이름 변경: ${oldName} -> ${newName} (전역 동기화 포함)`);
+}
 
 // ===== CLOUD DATA TRANSFORMATION (v7.0) =====
 function transformCloudToTree(flatData, timelineData = []) {
   const tree = [];
   flatData.forEach((row, idx) => {
-    // row: { industry, customer, opportunity, product, stage, amount }
     let a = tree.find(x => x.customer === row.customer && x.industry === row.industry);
     if (!a) {
       a = { id: Date.now() + idx, industry: row.industry, customer: row.customer, oppties: [], active: true };
@@ -458,13 +573,17 @@ function transformCloudToTree(flatData, timelineData = []) {
       stage: stg,
       amount: parseInt(row.amount) || 0,
       hurdle: 30,
-      stageEfforts: { 0: buildEfforts(0), 1: buildEfforts(1), 2: buildEfforts(2), 3: buildEfforts(3) },
+      stageEfforts: { 
+        0: buildEfforts(0, row.product), 
+        1: buildEfforts(1, row.product), 
+        2: buildEfforts(2, row.product), 
+        3: buildEfforts(3, row.product) 
+      },
       timeline: []
     });
   });
 
   timelineData.forEach(ev => {
-    // Ignore header row if it slipped through the API
     if (isNaN(parseInt(ev.stage))) return;
 
     tree.forEach(a => {
@@ -516,6 +635,7 @@ function transformCloudToTree(flatData, timelineData = []) {
   return tree;
 }
 
+// ===== THEME =====
 function setTheme(t) {
   if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   else document.documentElement.removeAttribute('data-theme');
