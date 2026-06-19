@@ -216,7 +216,8 @@ function renderMap() {
   const wrap = canvas.parentElement;
   canvas.width = wrap.clientWidth * 2; canvas.height = wrap.clientHeight * 2;
   const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
-  const W = wrap.clientWidth, H = wrap.clientHeight, pad = 60;
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  const pad = W < 400 ? 35 : 60;
   ctx.clearRect(0, 0, W, H);
   const cs = getComputedStyle(document.documentElement);
   const sMax = parseInt(document.getElementById('cfg-single-max').value) || 100000;
@@ -234,7 +235,10 @@ function renderMap() {
     ctx.beginPath(); ctx.moveTo(pad + i * colW, pad); ctx.lineTo(pad + i * colW, H - pad); ctx.stroke();
   }
   ctx.setLineDash([]);
-  ctx.fillStyle = cs.getPropertyValue('--text-muted').trim(); ctx.font = 'bold 10px Segoe UI'; ctx.textAlign = 'center';
+  const labelFont = W < 400 ? '8px Segoe UI' : 'bold 10px Segoe UI';
+  const dotFont = W < 400 ? '7px Segoe UI' : '9px Segoe UI';
+  const dotFontBold = W < 400 ? 'bold 8px Segoe UI' : 'bold 10px Segoe UI';
+  ctx.fillStyle = cs.getPropertyValue('--text-muted').trim(); ctx.font = labelFont; ctx.textAlign = 'center';
   stages.forEach((st, i) => ctx.fillText(`${stageIcons[i]} ${st}`, pad + i * colW + colW / 2, H - pad + 15));
 
   // 1. 전체 데이터 기준으로 모든 스트림의 고정(절대) 좌표 먼저 계산
@@ -299,7 +303,7 @@ function renderMap() {
       ctx.beginPath(); ctx.arc(xPos, yPos, r, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 1;
       ctx.fillStyle = isSel ? cs.getPropertyValue('--text-heading') : cs.getPropertyValue('--text-dim');
-      ctx.font = isSel ? 'bold 10px Segoe UI' : '9px Segoe UI'; ctx.textAlign = 'center';
+      ctx.font = isSel ? dotFontBold : dotFont; ctx.textAlign = 'center';
       const gapIcon = gap ? '⚠️ ' : '';
       ctx.fillText(`${gapIcon}${acc.customer}:${sol ? sol.name : s.solId}`, xPos, yPos - r - 8);
     });
